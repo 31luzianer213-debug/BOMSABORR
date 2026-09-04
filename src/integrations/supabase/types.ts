@@ -53,6 +53,74 @@ export type Database = {
         }
         Relationships: []
       }
+      courier_locations: {
+        Row: {
+          accuracy: number | null
+          courier_id: string
+          created_at: string
+          id: string
+          lat: number
+          lng: number
+        }
+        Insert: {
+          accuracy?: number | null
+          courier_id: string
+          created_at?: string
+          id?: string
+          lat: number
+          lng: number
+        }
+        Update: {
+          accuracy?: number | null
+          courier_id?: string
+          created_at?: string
+          id?: string
+          lat?: number
+          lng?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_locations_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      couriers: {
+        Row: {
+          active: boolean
+          created_at: string
+          fee_per_delivery: number
+          id: string
+          name: string
+          phone: string
+          share_token: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          fee_per_delivery?: number
+          id?: string
+          name: string
+          phone?: string
+          share_token?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          fee_per_delivery?: number
+          id?: string
+          name?: string
+          phone?: string
+          share_token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       delivery_zones: {
         Row: {
           active: boolean
@@ -85,10 +153,14 @@ export type Database = {
           address: string
           change_for: number | null
           code: string
+          courier_fee: number
+          courier_id: string | null
           created_at: string
           customer_name: string
           customer_phone: string
+          delivered_at: string | null
           delivery_fee: number
+          dispatched_at: string | null
           id: string
           items: Json
           neighborhood: string
@@ -98,6 +170,7 @@ export type Database = {
           status: string
           subtotal: number
           total: number
+          track_token: string
           updated_at: string
           whatsapp_sent: boolean
         }
@@ -105,10 +178,14 @@ export type Database = {
           address?: string
           change_for?: number | null
           code?: string
+          courier_fee?: number
+          courier_id?: string | null
           created_at?: string
           customer_name: string
           customer_phone: string
+          delivered_at?: string | null
           delivery_fee?: number
+          dispatched_at?: string | null
           id?: string
           items?: Json
           neighborhood?: string
@@ -118,6 +195,7 @@ export type Database = {
           status?: string
           subtotal?: number
           total?: number
+          track_token?: string
           updated_at?: string
           whatsapp_sent?: boolean
         }
@@ -125,10 +203,14 @@ export type Database = {
           address?: string
           change_for?: number | null
           code?: string
+          courier_fee?: number
+          courier_id?: string | null
           created_at?: string
           customer_name?: string
           customer_phone?: string
+          delivered_at?: string | null
           delivery_fee?: number
+          dispatched_at?: string | null
           id?: string
           items?: Json
           neighborhood?: string
@@ -138,10 +220,19 @@ export type Database = {
           status?: string
           subtotal?: number
           total?: number
+          track_token?: string
           updated_at?: string
           whatsapp_sent?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {
