@@ -1,0 +1,61 @@
+.toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 64px;
+  height: 32px;
+  padding: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease;
+  overflow: hidden;
+}
+
+.toggle:hover {
+  border-color: var(--accent-color);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.icon {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-tertiary);
+  transition: color 0.3s ease, transform 0.3s ease, opacity 0.3s ease;
+  opacity: 0.5;
+}
+
+.icon.active {
+  color: var(--text-primary);
+  opacity: 1;
+}
+
+.toggle:hover .icon.active {
+  transform: scale(1.1);
+}
+
+.slider {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.sliderDark {
+  transform: translateX(32px);
+}
