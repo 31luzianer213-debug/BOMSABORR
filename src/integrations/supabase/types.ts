@@ -95,6 +95,8 @@ export type Database = {
           fee_per_delivery: number
           id: string
           name: string
+          pay_amount: number
+          pay_type: string
           phone: string
           share_token: string
           updated_at: string
@@ -105,6 +107,8 @@ export type Database = {
           fee_per_delivery?: number
           id?: string
           name: string
+          pay_amount?: number
+          pay_type?: string
           phone?: string
           share_token?: string
           updated_at?: string
@@ -115,6 +119,8 @@ export type Database = {
           fee_per_delivery?: number
           id?: string
           name?: string
+          pay_amount?: number
+          pay_type?: string
           phone?: string
           share_token?: string
           updated_at?: string
