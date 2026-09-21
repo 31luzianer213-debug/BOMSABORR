@@ -177,8 +177,20 @@ export const Route = createFileRoute("/api/public/whatsapp")({
             turns,
           });
 
-          const { text: visible, order } = parseBotOrder(answer ?? "");
+          const { text: visible, order: parsedOrder } = parseBotOrder(answer ?? "");
           if (visible) await reply(visible);
+
+          let order = parsedOrder;
+
+          // Rede de segurança: o robô confirmou em texto mas esqueceu o bloco do pedido
+          const confirmedInText = /pedido\s+(foi\s+)?(confirmado|registrado|anotado|fechado)|confirmado!?\s*(🚀|✅)/i.test(
+            visible ?? "",
+          );
+          const orderedRecently =
+            last && Date.now() - new Date(last.created_at).getTime() < 20 * 60 * 1000;
+          if (!order && confirmedInText && !orderedRecently) {
+            order = await extractOrderFromConversation(turns, menu);
+          }
 
           if (order) {
             const result = await createBotOrder(order, phone);
