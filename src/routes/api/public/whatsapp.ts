@@ -4,6 +4,13 @@ type EvolutionPayload = { event?: string; data?: Record<string, any> };
 
 function extractText(message: Record<string, any> | undefined): string {
   if (!message) return "";
+  const loc = message["locationMessage"] ?? message["liveLocationMessage"];
+  if (loc?.["degreesLatitude"] != null && loc?.["degreesLongitude"] != null) {
+    const lat = loc["degreesLatitude"];
+    const lng = loc["degreesLongitude"];
+    const extra = [loc["name"], loc["address"], loc["comment"]].filter(Boolean).join(" - ");
+    return `[Localização enviada pelo cliente] https://www.google.com/maps?q=${lat},${lng}${extra ? ` (${extra})` : ""}`;
+  }
   return (
     message["conversation"] ??
     message["extendedTextMessage"]?.["text"] ??
