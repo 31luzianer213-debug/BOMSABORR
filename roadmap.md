@@ -20,3 +20,4 @@
 - [x] Corrigir segurança e confiabilidade do painel administrativo.
 - [x] Corrigir falhas de carregamento, formulários, acessibilidade e experiência no celular.
 - [x] Validar os fluxos principais e executar uma verificação final de segurança.
+- [ ] Integrar o Pix do Sicredi para gerar cobranças e confirmar pagamentos automaticamente (aguardando credenciais empresariais do Sicredi).
