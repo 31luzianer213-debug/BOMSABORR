@@ -3,7 +3,26 @@ import { createFileRoute } from "@tanstack/react-router";
 type EvolutionPayload = { event?: string; data?: Record<string, any> };
 
 type Coordinates = { latitude: number; longitude: number };
-type LocationAddress = { neighborhood: string | null; city: string | null };
+type LocationAddress = {
+  neighborhood: string | null;
+  city: string | null;
+  deliveryArea: string | null;
+};
+
+const MOJUI_URBAN_CENTER: Coordinates = { latitude: -2.682167, longitude: -54.642717 };
+
+function distanceInKm(from: Coordinates, to: Coordinates) {
+  const earthRadiusKm = 6371;
+  const radians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latitudeDelta = radians(to.latitude - from.latitude);
+  const longitudeDelta = radians(to.longitude - from.longitude);
+  const a =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(radians(from.latitude)) *
+      Math.cos(radians(to.latitude)) *
+      Math.sin(longitudeDelta / 2) ** 2;
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 function extractCoordinates(message: Record<string, any> | undefined): Coordinates | null {
   const loc = message?.["locationMessage"] ?? message?.["liveLocationMessage"];
@@ -27,13 +46,14 @@ async function identifyLocationAddress(coordinates: Coordinates): Promise<Locati
       "User-Agent": "BomSabor-Pedidos/1.0",
     },
   });
-  if (!response.ok) return { neighborhood: null, city: null };
+  if (!response.ok) return { neighborhood: null, city: null, deliveryArea: null };
 
   const result = (await response.json()) as {
     address?: Record<string, string | undefined>;
+    type?: string;
   };
   const address = result.address;
-  if (!address) return { neighborhood: null, city: null };
+  if (!address) return { neighborhood: null, city: null, deliveryArea: null };
 
   const city =
     address["city"] ??
@@ -47,7 +67,19 @@ async function identifyLocationAddress(coordinates: Coordinates): Promise<Locati
     address["quarter"] ??
     null;
 
-  return { neighborhood, city };
+  const normalizedNeighborhood = neighborhood?.toLocaleLowerCase("pt-BR") ?? "";
+  const knownNeighborhood = normalizedNeighborhood.includes("bairro novo")
+    ? "Bairro Novo"
+    : normalizedNeighborhood.includes("centro")
+      ? "Centro"
+      : null;
+  const isMojui = city?.toLocaleLowerCase("pt-BR").includes("mojuí dos campos") ?? false;
+  const isUrban =
+    isMojui &&
+    (result.type === "residential" || distanceInKm(coordinates, MOJUI_URBAN_CENTER) <= 4.5);
+  const deliveryArea = knownNeighborhood ?? (isUrban ? "Centro" : isMojui ? "Zona Rural" : null);
+
+  return { neighborhood, city, deliveryArea };
 }
 
 function extractText(message: Record<string, any> | undefined): string {
@@ -111,12 +143,16 @@ export const Route = createFileRoute("/api/public/whatsapp")({
           const locationAddress = await identifyLocationAddress(coordinates).catch(() => ({
             neighborhood: null,
             city: null,
+            deliveryArea: null,
           }));
           if (locationAddress.city) text += ` [Cidade identificada pela localização: ${locationAddress.city}]`;
-          if (locationAddress.neighborhood) {
-            text += ` [Bairro identificado pela localização: ${locationAddress.neighborhood}]`;
+          if (locationAddress.deliveryArea) {
+            text += ` [Área de entrega identificada automaticamente: ${locationAddress.deliveryArea}]`;
+            if (locationAddress.neighborhood) {
+              text += ` [Bairro retornado pelo mapa: ${locationAddress.neighborhood}]`;
+            }
           } else {
-            text += " [O mapa não informou o bairro; pergunte ao cliente se é Centro ou qual é o bairro]";
+            text += " [Não foi possível classificar automaticamente esta localização]";
           }
         }
         if (isAudio) {
