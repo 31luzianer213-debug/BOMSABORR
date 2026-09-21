@@ -14,6 +14,7 @@ import {
   saveAiSettings,
   setBotPaused,
 } from "@/lib/ai.functions";
+import { configureAiWebhook } from "@/lib/evolution.functions";
 
 export function AiPanel() {
   const qc = useQueryClient();
@@ -29,6 +30,7 @@ export function AiPanel() {
   const [greeting, setGreeting] = useState("");
   const [keywords, setKeywords] = useState("");
   const [saving, setSaving] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
