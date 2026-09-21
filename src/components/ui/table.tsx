@@ -60,7 +60,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-8 px-1 text-left align-middle text-xs font-medium text-muted-foreground md:h-10 md:px-2 md:text-sm lg:h-12 lg:px-4 lg:text-base [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+      "h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       className,
     )}
     {...props}
@@ -75,7 +75,7 @@ const TableCell = React.forwardRef<
   <td
     ref={ref}
     className={cn(
-      "p-1 text-xs md:p-2 md:text-sm lg:p-3 lg:text-base align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+      "p-2 align-middle [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       className,
     )}
     {...props}
@@ -87,21 +87,8 @@ const TableCaption = React.forwardRef<
   HTMLTableCaptionElement,
   React.HTMLAttributes<HTMLTableCaptionElement>
 >(({ className, ...props }, ref) => (
-  <caption
-    ref={ref}
-    className={cn("mt-2 text-xs text-muted-foreground md:mt-4 md:text-sm lg:text-base", className)}
-    {...props}
-  />
+  <caption ref={ref} className={cn("mt-4 text-sm text-muted-foreground", className)} {...props} />
 ));
 TableCaption.displayName = "TableCaption";
 
-export {
-  Table,
-  TableHeader,
-  TableBody,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableCaption,
-};
+export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };
