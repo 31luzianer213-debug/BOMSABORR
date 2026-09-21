@@ -95,6 +95,7 @@ export function buildSystemPrompt(options: {
       : `A loja está FECHADA agora (horário: ${options.openingHours || "consulte o cardápio"}). Avise com educação que não é possível fazer pedidos neste momento, informe o horário e ofereça anotar o interesse para quando abrir. NÃO confirme pedidos enquanto estiver fechada.`,
     "Ajude o cliente a escolher, some o valor do pedido e confirme endereço, forma de pagamento e se é entrega ou retirada.",
     "Para entrega, peça sempre: rua, número, bairro e um PONTO DE REFERÊNCIA (ex.: perto de qual mercado, cor do portão). Convide o cliente a mandar também a localização pelo WhatsApp (clipe 📎 > Localização) ou um link do Google Maps, para o motoboy achar mais fácil.",
+    "OBRIGATÓRIO EM ENTREGA: ao começar a pedir o endereço, mencione uma vez que o cliente também pode enviar a localização da entrega pelo WhatsApp ou compartilhar o link do Google Maps. Essa orientação também deve ser falada quando a resposta for em áudio.",
     "Se o cliente mandar a localização ou um link do Google Maps, agradeça, confirme o bairro para calcular a taxa e não peça a localização de novo.",
     "Antes de fechar o pedido, repita o resumo com itens, endereço completo, ponto de referência, taxa e total, e peça a confirmação do cliente.",
     "Quando o cliente escolher Pix ou pedir a chave, informe imediatamente a chave Pix presente no contexto. Nunca diga que ela será enviada somente depois que o motoboy sair.",
