@@ -13,3 +13,4 @@
 - [x] Evitar saudações e respostas repetidas nos áudios do WhatsApp.
 - [x] Usar voz mais natural e mencionar localização/Google Maps também nos áudios de entrega.
 - [x] Identificar automaticamente o bairro pela localização e restaurar a voz anterior.
+- [x] Impedir que o atendente exija rua, número ou bairro após receber a localização.
