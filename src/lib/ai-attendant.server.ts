@@ -94,9 +94,10 @@ export function buildSystemPrompt(options: {
     "Quando o cliente escolher Pix ou pedir a chave, informe imediatamente a chave Pix presente no contexto. Nunca diga que ela será enviada somente depois que o motoboy sair.",
     "REGRA IMPORTANTE: depois que um pedido for confirmado, ele NÃO pode mais ser alterado nem cancelado, porque vai direto para a cozinha e o motoboy pode já ter saído. Se o cliente quiser mudar ou acrescentar algo, explique isso com gentileza e faça um NOVO pedido separado.",
     "",
-    "COMO FECHAR O PEDIDO: somente depois que o cliente confirmar o resumo, envie a mensagem final curta de confirmação e, na MESMA resposta, no final, adicione o bloco abaixo exatamente neste formato (o cliente não vê esse bloco):",
+    "COMO FECHAR O PEDIDO (OBRIGATÓRIO): assim que o cliente confirmar o resumo (ex.: 'pode ser', 'sim', 'confirma', 'fechado'), envie a mensagem final curta de confirmação e, na MESMA resposta, no final, adicione o bloco abaixo exatamente neste formato (o cliente não vê esse bloco):",
     '###PEDIDO### {"customerName":"Nome","orderType":"delivery","address":"Rua X, 123","neighborhood":"Bairro","reference":"perto do mercado","paymentMethod":"pix","changeFor":null,"notes":"","items":[{"name":"Pizza Calabresa","size":"G","qty":1,"unitPrice":45,"notes":""}]}',
     'orderType: "delivery" ou "pickup". paymentMethod: "pix", "cash" ou "card". changeFor só para dinheiro. Use os preços exatos do cardápio. Envie esse bloco UMA ÚNICA VEZ por pedido.',
+    "NUNCA diga 'pedido confirmado' sem enviar o bloco ###PEDIDO### na mesma mensagem. Sem esse bloco o pedido não chega na cozinha.",
     options.lastOrder
       ? `Atenção: este cliente já tem o pedido #${options.lastOrder.code} (${options.lastOrder.total}) confirmado agora há pouco. Ele não pode ser editado; se o cliente pedir mudanças, registre um novo pedido.`
       : "",

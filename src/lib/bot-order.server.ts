@@ -50,6 +50,51 @@ export function parseBotOrder(answer: string): { text: string; order: BotOrder |
   }
 }
 
+/**
+ * Rede de segurança: se o robô confirmou o pedido em texto mas esqueceu o bloco JSON,
+ * relemos a conversa e extraímos o pedido mesmo assim.
+ */
+export async function extractOrderFromConversation(
+  turns: Array<{ role: "user" | "assistant"; content: string }>,
+  menu: string,
+): Promise<BotOrder | null> {
+  try {
+    const { generateAiText } = await import("@/lib/ai.server");
+    const system = [
+      "Você lê uma conversa de atendimento de uma lanchonete/pizzaria e extrai o pedido JÁ CONFIRMADO pelo cliente.",
+      "Responda APENAS com JSON puro, sem texto extra e sem markdown.",
+      'Se o cliente ainda NÃO confirmou o pedido fechado, responda exatamente: {"confirmado":false}',
+      'Se confirmou, responda: {"confirmado":true,"pedido":{"customerName":"Nome","orderType":"delivery","address":"Rua X, 123","neighborhood":"Bairro","reference":"","paymentMethod":"pix","changeFor":null,"notes":"","items":[{"name":"Item","size":"","qty":1,"unitPrice":10,"notes":""}]}}',
+      'orderType: "delivery" ou "pickup". paymentMethod: "pix", "cash" ou "card". changeFor só para dinheiro.',
+      "Use os preços exatos do cardápio abaixo. Não invente itens.",
+      `Cardápio:\n${menu}`,
+    ].join("\n");
+
+    const answer = await generateAiText({
+      system,
+      turns: [
+        {
+          role: "user",
+          content: `Conversa:\n${turns
+            .map((t) => `${t.role === "user" ? "Cliente" : "Atendente"}: ${t.content}`)
+            .join("\n")}`,
+        },
+      ],
+    });
+
+    const raw = String(answer ?? "");
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start === -1 || end <= start) return null;
+    const parsed = JSON.parse(raw.slice(start, end + 1));
+    if (!parsed?.confirmado || !parsed?.pedido) return null;
+    return botOrderSchema.parse(parsed.pedido);
+  } catch (error) {
+    console.error("Falha ao extrair pedido da conversa", error);
+    return null;
+  }
+}
+
 function normalizePhone(raw: string) {
   const digits = raw.replace(/\D/g, "");
   return digits.startsWith("55") ? digits : `55${digits}`;
