@@ -102,11 +102,21 @@ export const Route = createFileRoute("/api/public/whatsapp")({
         }
         if (!conversationId) return new Response("ok");
 
+        const externalId = String(key["id"] ?? "").trim();
+        if (externalId) {
+          const { data: alreadyHandled } = await supabaseAdmin
+            .from("wa_messages")
+            .select("id")
+            .eq("external_id", externalId)
+            .maybeSingle();
+          if (alreadyHandled) return new Response("ok");
+        }
+
         await supabaseAdmin.from("wa_messages").insert({
           conversation_id: conversationId,
           direction: "inbound",
           content: text,
-          external_id: key["id"] ?? null,
+          external_id: externalId || null,
         });
 
         if (existing?.bot_paused) return new Response("ok");
@@ -136,10 +146,6 @@ export const Route = createFileRoute("/api/public/whatsapp")({
             .update({ last_message_at: new Date().toISOString(), last_message_preview: message.slice(0, 120) })
             .eq("id", conversationId);
         };
-
-        if (isNew && settings.greeting?.trim()) {
-          await reply(settings.greeting.trim());
-        }
 
         const { data: history } = await supabaseAdmin
           .from("wa_messages")
