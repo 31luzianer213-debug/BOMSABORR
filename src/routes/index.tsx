@@ -71,7 +71,17 @@ function MenuPage() {
     const stored = window.localStorage.getItem(CART_KEY);
     if (stored) {
       try {
-        setItems(JSON.parse(stored) as CartItem[]);
+        const parsed: unknown = JSON.parse(stored);
+        if (!Array.isArray(parsed)) throw new Error("Carrinho inválido");
+        const valid = parsed.filter(
+          (item): item is CartItem =>
+            typeof item === "object" && item !== null &&
+            typeof item.id === "string" && typeof item.name === "string" &&
+            typeof item.size === "string" && typeof item.notes === "string" &&
+            Number.isInteger(item.qty) && item.qty > 0 && item.qty <= 50 &&
+            Number.isFinite(item.unitPrice) && item.unitPrice >= 0,
+        );
+        setItems(valid);
       } catch {
         setItems([]);
       }
@@ -330,13 +340,14 @@ function MenuPage() {
       {count > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-background/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl">
           <Button className="mx-auto flex h-12 w-full max-w-6xl items-center justify-between rounded-full px-5 font-display text-base font-bold shadow-glow" onClick={() => setCartOpen(true)}>
-            <span className="flex items-center gap-2"><ShoppingBag className="size-5" /> {count} {count === 1 ? "item" : "itens"}</span>
+            <span aria-live="polite" className="flex items-center gap-2"><ShoppingBag className="size-5" /> {count} {count === 1 ? "item" : "itens"}</span>
             <span>{brl(cartTotal(items))} • Ver pedido</span>
           </Button>
         </div>
       )}
 
       <PizzaDialog
+        key={pizzaTarget?.id ?? "closed"}
         product={pizzaTarget}
         category={pizzaCategory}
         siblings={pizzaTarget ? (productsByCategory.get(pizzaTarget.category_id) ?? []) : []}

@@ -25,7 +25,6 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,20 +33,9 @@ function AuthPage() {
     event.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        toast.success("Conta criada! Já pode entrar.");
-        setMode("signin");
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        navigate({ to: "/admin" });
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      navigate({ to: "/admin" });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Falha na autenticação.");
     } finally {
@@ -64,7 +52,7 @@ function AuthPage() {
         <div className="grid size-10 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-glow">◈</div>
         <h1 className="font-display text-3xl font-extrabold tracking-tight text-primary">Painel Bom Sabor</h1>
         <p className="text-sm text-muted-foreground">
-          {mode === "signin" ? "Entre para gerenciar o cardápio." : "Crie a conta do administrador."}
+          Entre com a conta autorizada para gerenciar o cardápio.
         </p>
         <div className="grid gap-2">
           <Label htmlFor="email">E-mail</Label>
@@ -88,15 +76,8 @@ function AuthPage() {
           />
         </div>
         <Button type="submit" className="w-full font-display text-lg" disabled={loading}>
-          {loading ? "Aguarde..." : mode === "signin" ? "Entrar" : "Criar conta"}
+          {loading ? "Aguarde..." : "Entrar"}
         </Button>
-        <button
-          type="button"
-          className="w-full text-xs underline opacity-80"
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-        >
-          {mode === "signin" ? "Não tenho conta ainda" : "Já tenho conta"}
-        </button>
       </form>
     </div>
   );

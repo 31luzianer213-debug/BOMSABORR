@@ -72,11 +72,11 @@ export function PizzaDialog({
 
 
   return (
-    <Dialog open onOpenChange={() => onClose()}>
+    <Dialog open onOpenChange={() => { reset(); onClose(); }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto rounded-[1.5rem] border-white/10 bg-popover shadow-soft">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl text-primary">{product.name}</DialogTitle>
-          <DialogDescription className="text-primary-foreground/0 sr-only">
+          <DialogDescription className="sr-only">
             Escolha o tamanho da pizza
           </DialogDescription>
         </DialogHeader>

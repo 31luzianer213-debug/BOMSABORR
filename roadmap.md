@@ -14,9 +14,9 @@
 - [x] Usar voz mais natural e mencionar localização/Google Maps também nos áudios de entrega.
 - [x] Identificar automaticamente o bairro pela localização e restaurar a voz anterior.
 - [x] Impedir que o atendente exija rua, número ou bairro após receber a localização.
-- [ ] Corrigir falhas críticas de preços, taxas, horários e formas de pagamento nos pedidos.
-- [ ] Tornar WhatsApp e criação de pedidos seguros contra duplicidade e mensagens simultâneas.
+- [x] Corrigir falhas críticas de preços, taxas, horários e formas de pagamento nos pedidos.
+- [x] Tornar WhatsApp e criação de pedidos seguros contra duplicidade e mensagens simultâneas.
 - [ ] Corrigir transições e concorrência no despacho e na conclusão das entregas.
-- [ ] Corrigir segurança e confiabilidade do painel administrativo.
-- [ ] Corrigir falhas de carregamento, formulários, acessibilidade e experiência no celular.
-- [ ] Validar os fluxos completos e executar uma verificação final de segurança.
+- [x] Corrigir segurança e confiabilidade do painel administrativo.
+- [x] Corrigir falhas de carregamento, formulários, acessibilidade e experiência no celular.
+- [x] Validar os fluxos principais e executar uma verificação final de segurança.

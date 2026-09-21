@@ -46,6 +46,7 @@ async function evolutionRequest(path: string, body: unknown) {
 
   try {
     const response = await fetch(`${evolutionBaseUrl(base)}${path.replace("{instance}", encodeURIComponent(instance))}`, {
+      signal: AbortSignal.timeout(15_000),
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: apiKey },
       body: JSON.stringify(body),

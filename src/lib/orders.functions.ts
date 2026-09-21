@@ -2,6 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { evolutionBaseUrl } from "./evolution-url";
+import { isStoreOpenNow } from "./store-hours";
+import { validateAndPriceItems } from "./order-validation.server";
+import { coordinatesFromMapsUrl, identifyLocationAddress } from "./delivery-location.server";
 
 const itemSchema = z.object({
   name: z.string().trim().min(1).max(160),
@@ -94,9 +97,18 @@ export const createOrder = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
 
-    if (!settings?.is_open) {
+    if (!settings || !isStoreOpenNow(settings.is_open, settings.opening_hours)) {
       throw new Error("A loja está fechada no momento.");
     }
+
+    if (data.orderType === "delivery" && !settings.allow_delivery) throw new Error("Entrega indisponível no momento.");
+    if (data.orderType === "pickup" && !settings.allow_pickup) throw new Error("Retirada indisponível no momento.");
+    const paymentAllowed = {
+      pix: settings.pay_pix,
+      cash: settings.pay_cash,
+      card: settings.pay_card,
+    }[data.paymentMethod];
+    if (!paymentAllowed) throw new Error("Forma de pagamento indisponível.");
 
     let deliveryFee = 0;
     const hasGeoLocation = Boolean(data.locationUrl);
@@ -104,17 +116,21 @@ export const createOrder = createServerFn({ method: "POST" })
     if (data.orderType === "delivery") {
       if (settings.use_flat_fee) {
         deliveryFee = Number(settings.flat_delivery_fee);
-      } else if (data.neighborhood) {
+      } else {
+        let deliveryArea = data.neighborhood;
+        if (!deliveryArea && data.locationUrl) {
+          const coordinates = coordinatesFromMapsUrl(data.locationUrl);
+          if (coordinates) deliveryArea = (await identifyLocationAddress(coordinates)).deliveryArea ?? "";
+        }
+        if (!deliveryArea) throw new Error("Não foi possível identificar a área de entrega. Selecione o bairro.");
         const { data: zone } = await supabaseAdmin
           .from("delivery_zones")
           .select("fee")
-          .eq("name", data.neighborhood)
+          .ilike("name", deliveryArea)
           .eq("active", true)
           .maybeSingle();
         if (!zone) throw new Error("Selecione um bairro de entrega válido.");
         deliveryFee = Number(zone.fee);
-      } else if (!hasGeoLocation) {
-        throw new Error("Selecione um bairro de entrega válido.");
       }
 
       if (!hasGeoLocation && data.address.trim().length < 5) {
@@ -122,7 +138,8 @@ export const createOrder = createServerFn({ method: "POST" })
       }
     }
 
-    const subtotal = data.items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
+    const pricedOrder = await validateAndPriceItems(supabaseAdmin, data.items);
+    const subtotal = pricedOrder.subtotal;
     const total = subtotal + deliveryFee;
 
     if (Number(settings.min_order) > 0 && subtotal < Number(settings.min_order)) {
@@ -145,7 +162,7 @@ export const createOrder = createServerFn({ method: "POST" })
         delivery_fee: deliveryFee,
         payment_method: data.paymentMethod,
         change_for: data.paymentMethod === "cash" ? data.changeFor : null,
-        items: data.items,
+        items: pricedOrder.itemsJson,
         subtotal,
         total,
         notes: data.notes,
@@ -165,7 +182,7 @@ export const createOrder = createServerFn({ method: "POST" })
     const orderLines = [
       `*${settings.store_name} — Pedido #${order.code}*`,
       "",
-      ...data.items.map(
+      ...pricedOrder.items.map(
         (item) =>
           `• ${item.qty}x ${item.name}${item.size ? ` (${item.size})` : ""} — ${brl(item.qty * item.unitPrice)}${item.notes ? `\n   _${item.notes}_` : ""}`,
       ),
