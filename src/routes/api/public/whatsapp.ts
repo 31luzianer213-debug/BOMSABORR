@@ -191,6 +191,7 @@ export const Route = createFileRoute("/api/public/whatsapp")({
               menuUrl: new URL(request.url).origin,
               isOpen: Boolean(store && isStoreOpenNow(store.is_open, store.opening_hours)),
               openingHours: store?.opening_hours ?? "",
+              responseMode: isAudio ? "audio" : "text",
               lastOrder,
             }),
             turns,

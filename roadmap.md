@@ -9,3 +9,4 @@
 - [x] Calcular automaticamente se a loja está aberta pelo horário de Brasília.
 - [x] Melhorar o cardápio no celular mantendo cores, logo e funcionamento atuais.
 - [x] Entender áudios do WhatsApp, marcar mensagens, mostrar presença e responder no mesmo formato.
+- [x] Deixar as respostas em áudio mais curtas, naturais e humanas.

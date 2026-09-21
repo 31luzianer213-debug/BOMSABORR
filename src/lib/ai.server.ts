@@ -59,7 +59,8 @@ export async function generateAiSpeech(text: string): Promise<string> {
       model: "openai/gpt-4o-mini-tts",
       voice: "coral",
       input: text,
-      instructions: "Fale em português do Brasil, com voz simpática, natural e objetiva de atendente de pizzaria.",
+      instructions:
+        "Fale em português do Brasil como uma atendente real e acolhedora de pizzaria. Use ritmo de conversa, pausas naturais e entonação variada. Não soe como locução, anúncio ou robô. Seja ágil, espontânea e simpática, sem exagerar na animação. Leia valores e endereços de forma natural.",
     }),
   });
   if (!response.ok) throw new Error(`Não consegui gerar o áudio agora [${response.status}].`);
