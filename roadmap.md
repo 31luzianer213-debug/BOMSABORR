@@ -7,4 +7,4 @@
 - [x] Permitir apagar um pedido com confirmação.
 - [x] Corrigir confirmação Pix e apresentação da localização do pedido do site.
 - [x] Calcular automaticamente se a loja está aberta pelo horário de Brasília.
-- [ ] Melhorar o cardápio no celular mantendo cores, logo e funcionamento atuais.
+- [x] Melhorar o cardápio no celular mantendo cores, logo e funcionamento atuais.

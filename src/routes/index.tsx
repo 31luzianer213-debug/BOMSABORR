@@ -133,14 +133,16 @@ function MenuPage() {
   return (
     <div className="min-h-screen pb-32 font-sans selection:bg-primary selection:text-primary-foreground">
       <header className="sticky top-0 z-40 border-b border-white/10 bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-[64px] max-w-6xl items-center justify-between gap-3 px-4">
+        <div className="mx-auto flex h-[60px] max-w-6xl items-center justify-between gap-3 px-4 sm:h-[64px]">
           <div className="flex items-center gap-3">
             <div className="grid size-9 place-items-center rounded-xl bg-gradient-gold text-primary-foreground shadow-glow">
               <UtensilsCrossed className="size-4" />
             </div>
             <div className="leading-none">
               <p className="font-display text-[19px] font-extrabold tracking-tight text-foreground">{settings.store_name}</p>
-              <p className="hidden text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground sm:block">Pizzaria & Lanchonete</p>
+              <p className={`text-[10px] font-bold ${settings.is_open ? "text-emerald-300" : "text-muted-foreground"}`}>
+                {settings.is_open ? "Aberto agora" : "Fechado agora"}
+              </p>
             </div>
             <span className={`ml-1 hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold sm:inline-flex ${settings.is_open ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-muted-foreground"}`}>
               <span className={`size-1.5 rounded-full ${settings.is_open ? "bg-emerald-400" : "bg-muted-foreground"}`} />
@@ -152,15 +154,15 @@ function MenuPage() {
               <Clock3 className="size-3.5" /> {settings.opening_hours}
             </span>
             <Button variant="secondary" className="hidden rounded-full border border-white/10 bg-white/5 font-bold backdrop-blur sm:inline-flex" onClick={() => window.open(`https://wa.me/${wa}`, "_blank")}>WhatsApp</Button>
-            <button type="button" onClick={() => setCartOpen(true)} className="inline-flex items-center gap-2 rounded-full bg-gradient-gold px-4 py-2 text-sm font-extrabold text-primary-foreground shadow-glow">
+            <Button type="button" onClick={() => setCartOpen(true)} className="h-11 rounded-full px-3 text-sm font-extrabold shadow-glow sm:px-4">
               <ShoppingBag className="size-4" />
               <span className="hidden sm:inline">Sacola</span>
               <span className="grid min-w-6 place-items-center rounded-full bg-primary-foreground px-1.5 py-0.5 text-xs font-black text-primary">{count}</span>
-            </button>
+            </Button>
           </div>
         </div>
       </header>
-      <section className="relative overflow-hidden border-b border-white/10">
+      <section className="relative hidden overflow-hidden border-b border-white/10 sm:block">
         <div className="pointer-events-none absolute -top-24 right-[-8%] h-[520px] w-[680px] rounded-full bg-gradient-pink opacity-[0.18] blur-[70px]" />
         <div className="pointer-events-none absolute -bottom-24 left-[-10%] h-[520px] w-[620px] rounded-full bg-primary/20 opacity-30 blur-[80px]" />
         <div className="mx-auto grid max-w-6xl items-start gap-6 px-4 py-6 sm:py-10 lg:grid-cols-[1.15fr_0.85fr]">
@@ -208,8 +210,8 @@ function MenuPage() {
         </div>
       </section>
 
-      <nav className="sticky top-[64px] z-30 border-b border-white/10 bg-background/75 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
+      <nav className="sticky top-[60px] z-30 border-b border-white/10 bg-background/90 backdrop-blur-xl sm:top-[64px]">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5 sm:py-3">
           <span className="hidden shrink-0 items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground sm:inline-flex">
             <Sparkles className="size-3" /> Categorias
           </span>
@@ -224,7 +226,7 @@ function MenuPage() {
                   .getElementById(`cat-${category.id}`)
                   ?.scrollIntoView({ behavior: "smooth", block: "start" });
               }}
-              className={`snap-start whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-bold transition-all active:scale-[0.98] ${
+              className={`min-h-11 snap-start whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-bold transition-all active:scale-[0.98] ${
                 activeCategory === category.id
                   ? "bg-gradient-gold text-primary-foreground shadow-glow"
                   : "border border-white/10 bg-white/[0.04] text-muted-foreground hover:bg-white/10 hover:text-foreground"
@@ -237,32 +239,32 @@ function MenuPage() {
         </div>
       </nav>
 
-      <div className="mx-auto max-w-6xl px-4 pt-4">
-        <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur sm:flex-row sm:items-center">
+      <div className="mx-auto max-w-6xl px-4 pt-3 sm:pt-4">
+        <div className="flex gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-2 backdrop-blur sm:items-center sm:p-3">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar pizza, sanduíche, ingrediente..." className="h-11 rounded-full border-white/10 bg-background/60 pl-9 pr-9 text-[15px]" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar no cardápio..." className="h-11 rounded-full border-white/10 bg-background/60 pl-9 pr-9 text-[15px]" />
             {query && (
               <button type="button" onClick={() => setQuery("")} className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-full bg-white/10 text-muted-foreground hover:bg-white/20" aria-label="Limpar busca">
                 <X className="size-4" />
               </button>
             )}
           </div>
-          <button type="button" onClick={() => setOnlyPizza((v) => !v)} className={`inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full px-5 text-sm font-extrabold transition-all active:scale-[0.98] ${onlyPizza ? "bg-gradient-gold text-primary-foreground shadow-glow" : "border border-white/10 bg-white/5 text-foreground hover:bg-white/10"}`}>
-            <Flame className="size-4" /> {onlyPizza ? "Só pizzas ✓" : "Só pizzas"}
-          </button>
+          <Button type="button" variant={onlyPizza ? "default" : "secondary"} size="icon" onClick={() => setOnlyPizza((v) => !v)} className="size-11 shrink-0 rounded-full" aria-label={onlyPizza ? "Mostrar todo o cardápio" : "Mostrar somente pizzas"} title="Só pizzas">
+            <Flame className="size-4" />
+          </Button>
           {(query || onlyPizza) && (visibleCategories.length === 0) && (
             <span className="text-xs font-bold text-muted-foreground">Nenhum item encontrado</span>
           )}
         </div>
       </div>
 
-      <main className="mx-auto max-w-6xl space-y-10 px-4 py-6 sm:py-8">
+      <main className="mx-auto max-w-6xl space-y-8 px-4 py-5 sm:space-y-10 sm:py-8">
         {visibleCategories.map((category) => (
           <section key={category.id} id={`cat-${category.id}`} className="scroll-mt-28">
             <div className="flex items-end justify-between gap-4">
               <div>
-                <h2 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{category.name}</h2>
+                <h2 className="font-display text-[1.4rem] font-extrabold text-foreground sm:text-3xl">{category.name}</h2>
                 <p className="mt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                   {category.kind === "pizza" ? "Escolha o tamanho • meia a meia disponível" : `${(productsByCategory.get(category.id) ?? []).length} opções`}
                 </p>
@@ -274,12 +276,12 @@ function MenuPage() {
             </div>
 
             {category.kind === "pizza" && (
-              <div className="mt-4 grid grid-cols-4 gap-1.5 sm:gap-2">
+              <div className="mt-3 grid grid-cols-4 gap-1.5 sm:mt-4 sm:gap-2">
                 {SIZES.map((size) => {
                   const price = category[`price_${size.key}` as const];
                   if (price === null) return null;
                   return (
-                    <div key={size.key} className="rounded-2xl border border-white/10 bg-white/[0.04] px-2 py-3 text-center backdrop-blur">
+                    <div key={size.key} className="rounded-xl border border-white/10 bg-white/[0.04] px-1 py-2.5 text-center backdrop-blur sm:rounded-2xl sm:px-2 sm:py-3">
                       <span className="block font-display text-base text-primary">{size.label}</span>
                       <span className="block text-[9px] uppercase tracking-wide text-muted-foreground">{size.full}</span>
                       <span className="mt-0.5 block text-xs font-bold text-foreground">{brl(Number(price))}</span>
@@ -289,21 +291,21 @@ function MenuPage() {
               </div>
             )}
 
-            <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="mt-4 grid gap-2.5 sm:mt-5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
               {(productsByCategory.get(category.id) ?? []).map((product) => (
-                <li key={product.id} className="premium-card group flex flex-col rounded-2xl border border-white/10 bg-card p-4 shadow-soft hover:border-primary/30">
+                <li key={product.id} className="premium-card group flex flex-col rounded-2xl border border-white/10 bg-card p-3.5 shadow-soft hover:border-primary/30 sm:p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="font-display text-[15px] font-bold leading-tight text-foreground">{product.name}</h3>
+                      <h3 className="font-display text-base font-bold leading-tight text-foreground">{product.name}</h3>
                       {product.description && <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">{product.description}</p>}
                     </div>
                     <span className="shrink-0 whitespace-nowrap rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 font-display text-sm font-extrabold text-primary">
                       {category.kind === "pizza" ? brl(Number(category.price_p ?? 0)) : brl(Number(product.price ?? 0))}
                     </span>
                   </div>
-                  <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+                  <div className="mt-auto flex items-center justify-between gap-2 pt-3 sm:pt-4">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{category.kind === "pizza" ? "a partir de • 4 tamanhos" : "pronto em minutos"}</span>
-                    <Button size="sm" className="h-10 min-h-10 rounded-full px-5 text-[13px] font-extrabold shadow-soft active:scale-[0.98] sm:h-9" disabled={!settings.is_open} onClick={() => { if (category.kind === "pizza") setPizzaTarget(product); else addItem({ name: product.name, size: "", qty: 1, unitPrice: Number(product.price ?? 0), notes: "" }); }}>
+                    <Button size="sm" className="h-11 min-h-11 rounded-full px-5 text-[13px] font-extrabold shadow-soft active:scale-[0.98] sm:h-9 sm:min-h-9" disabled={!settings.is_open} onClick={() => { if (category.kind === "pizza") setPizzaTarget(product); else addItem({ name: product.name, size: "", qty: 1, unitPrice: Number(product.price ?? 0), notes: "" }); }}>
                       {category.kind === "pizza" ? "Escolher" : "Adicionar"}
                     </Button>
                   </div>
