@@ -34,7 +34,7 @@ export async function buildMenuContext(): Promise<string> {
     const items = (products.data ?? []).filter((p) => p.category_id === category.id);
     if (items.length === 0) continue;
     if (category.kind === "pizza") {
-      const sizes = (["p", "m", "g", "gg"] as const)
+      const sizes = (["p", "m", "g", "f"] as const)
         .map((k) => {
           const price = category[`price_${k}` as const];
           return price === null || price === undefined ? null : `${k.toUpperCase()}: ${brl(Number(price))}`;
