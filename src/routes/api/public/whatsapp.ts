@@ -32,11 +32,32 @@ async function reverseGeocodeNeighborhood(lat: number, lng: number): Promise<{
       address?: Record<string, string | undefined>;
     };
     const address = data.address ?? {};
+    const candidates = [
+      cleanAddressPart(address["neighbourhood"]),
+      cleanAddressPart(address["suburb"]),
+      cleanAddressPart(address["quarter"]),
+      cleanAddressPart(address["residential"]),
+    ].filter(Boolean);
+
+    // Nominatim às vezes devolve município/distrito administrativo em campos
+    // próximos de bairro. Nunca aceite esses nomes como bairro da entrega.
+    const administrativeNames = new Set(
+      [
+        address["city"],
+        address["town"],
+        address["municipality"],
+        address["county"],
+        address["city_district"],
+        address["state_district"],
+        address["state"],
+      ]
+        .map(cleanAddressPart)
+        .filter(Boolean)
+        .map((value) => value.toLocaleLowerCase("pt-BR")),
+    );
+
     const neighborhood =
-      cleanAddressPart(address["neighbourhood"]) ||
-      cleanAddressPart(address["suburb"]) ||
-      cleanAddressPart(address["quarter"]) ||
-      cleanAddressPart(address["city_district"]);
+      candidates.find((value) => !administrativeNames.has(value.toLocaleLowerCase("pt-BR"))) ?? "";
 
     if (!neighborhood) return null;
     return {
