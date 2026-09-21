@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_settings: {
+        Row: {
+          greeting: string
+          handoff_keywords: string[]
+          id: string
+          is_enabled: boolean
+          system_prompt: string
+          updated_at: string
+        }
+        Insert: {
+          greeting?: string
+          handoff_keywords?: string[]
+          id?: string
+          is_enabled?: boolean
+          system_prompt?: string
+          updated_at?: string
+        }
+        Update: {
+          greeting?: string
+          handoff_keywords?: string[]
+          id?: string
+          is_enabled?: boolean
+          system_prompt?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           active: boolean
@@ -373,6 +400,74 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      wa_conversations: {
+        Row: {
+          bot_paused: boolean
+          created_at: string
+          customer_name: string | null
+          id: string
+          last_message_at: string
+          last_message_preview: string | null
+          phone: string
+          status: string
+        }
+        Insert: {
+          bot_paused?: boolean
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          phone: string
+          status?: string
+        }
+        Update: {
+          bot_paused?: boolean
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          phone?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      wa_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          direction: string
+          external_id: string | null
+          id: string
+        }
+        Insert: {
+          content?: string
+          conversation_id: string
+          created_at?: string
+          direction: string
+          external_id?: string | null
+          id?: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          external_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wa_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "wa_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
