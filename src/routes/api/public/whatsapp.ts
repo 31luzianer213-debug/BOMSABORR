@@ -49,8 +49,22 @@ export const Route = createFileRoute("/api/public/whatsapp")({
         if (key["fromMe"]) return new Response("ok");
 
         const phone = (remoteJid.split("@")[0] ?? "").replace(/\D/g, "");
-        const text = String(extractText(data["message"]) ?? "").trim();
-        if (!phone || !text) return new Response("ok");
+        if (!phone) return new Response("ok");
+        const message = (data["message"] ?? {}) as Record<string, any>;
+        const isAudio = Boolean(message["audioMessage"]);
+        const { getWhatsappMediaBase64, markWhatsappRead, sendWhatsappAudio, sendWhatsappReply, showWhatsappPresence } =
+          await import("@/lib/whatsapp.server");
+        await markWhatsappRead(key).catch(() => null);
+        await showWhatsappPresence(phone, isAudio ? "recording" : "composing").catch(() => null);
+
+        let text = String(extractText(message) ?? "").trim();
+        if (isAudio) {
+          const media = await getWhatsappMediaBase64(data);
+          if (!media.ok) return new Response("ok");
+          const { transcribeAiAudio } = await import("@/lib/ai.server");
+          text = await transcribeAiAudio(media.base64, media.mimetype).catch(() => "");
+        }
+        if (!text) return new Response("ok");
         const pushName: string | null = data["pushName"] ?? null;
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -104,10 +118,14 @@ export const Route = createFileRoute("/api/public/whatsapp")({
           .maybeSingle();
         if (!settings?.is_enabled) return new Response("ok");
 
-        const { sendWhatsapp } = await import("@/lib/whatsapp.server");
-
         const reply = async (message: string) => {
-          await sendWhatsapp(phone, message);
+          if (isAudio) {
+            const { generateAiSpeech } = await import("@/lib/ai.server");
+            const audio = await generateAiSpeech(message);
+            await sendWhatsappAudio(phone, audio, key["id"] ?? undefined);
+          } else {
+            await sendWhatsappReply(phone, message, key["id"] ?? undefined);
+          }
           await supabaseAdmin.from("wa_messages").insert({
             conversation_id: conversationId,
             direction: "outbound",
