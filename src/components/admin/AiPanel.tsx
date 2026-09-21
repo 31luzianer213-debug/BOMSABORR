@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Bot, MessageSquare, Pause, Play, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -56,7 +56,7 @@ export function AiPanel() {
           isEnabled: enabled,
           systemPrompt: prompt.trim(),
           greeting: greeting.trim(),
-          handoffKeywords: keywords
+          handoffKeywords: [] as string[],
             .split(",")
             .map((k) => k.trim())
             .filter(Boolean),
