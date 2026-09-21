@@ -105,8 +105,8 @@ export function CheckoutSheet({
       toast.error("Informe um WhatsApp válido com DDD.");
       return;
     }
-    if (orderType === "delivery" && address.trim().length < 5) {
-      toast.error("Informe o endereço de entrega.");
+    if (orderType === "delivery" && !mapsLink && address.trim().length < 5) {
+      toast.error("Informe o endereço ou envie sua localização.");
       return;
     }
     if (orderType === "delivery" && !mapsLink && !settings.use_flat_fee && !neighborhood) {

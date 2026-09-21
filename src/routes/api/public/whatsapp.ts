@@ -3,26 +3,6 @@ import { createFileRoute } from "@tanstack/react-router";
 type EvolutionPayload = { event?: string; data?: Record<string, any> };
 
 type Coordinates = { latitude: number; longitude: number };
-type LocationAddress = {
-  neighborhood: string | null;
-  city: string | null;
-  deliveryArea: string | null;
-};
-
-const MOJUI_URBAN_CENTER: Coordinates = { latitude: -2.682167, longitude: -54.642717 };
-
-function distanceInKm(from: Coordinates, to: Coordinates) {
-  const earthRadiusKm = 6371;
-  const radians = (degrees: number) => (degrees * Math.PI) / 180;
-  const latitudeDelta = radians(to.latitude - from.latitude);
-  const longitudeDelta = radians(to.longitude - from.longitude);
-  const a =
-    Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(radians(from.latitude)) *
-      Math.cos(radians(to.latitude)) *
-      Math.sin(longitudeDelta / 2) ** 2;
-  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 function extractCoordinates(message: Record<string, any> | undefined): Coordinates | null {
   const loc = message?.["locationMessage"] ?? message?.["liveLocationMessage"];
@@ -30,57 +10,6 @@ function extractCoordinates(message: Record<string, any> | undefined): Coordinat
   const longitude = Number(loc?.["degreesLongitude"]);
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
   return { latitude, longitude };
-}
-
-async function identifyLocationAddress(coordinates: Coordinates): Promise<LocationAddress> {
-  const url = new URL("https://nominatim.openstreetmap.org/reverse");
-  url.searchParams.set("format", "jsonv2");
-  url.searchParams.set("lat", String(coordinates.latitude));
-  url.searchParams.set("lon", String(coordinates.longitude));
-  url.searchParams.set("zoom", "18");
-  url.searchParams.set("addressdetails", "1");
-
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(8_000),
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "BomSabor-Pedidos/1.0",
-    },
-  });
-  if (!response.ok) return { neighborhood: null, city: null, deliveryArea: null };
-
-  const result = (await response.json()) as {
-    address?: Record<string, string | undefined>;
-    type?: string;
-  };
-  const address = result.address;
-  if (!address) return { neighborhood: null, city: null, deliveryArea: null };
-
-  const city =
-    address["city"] ??
-    address["town"] ??
-    address["municipality"] ??
-    address["village"] ??
-    null;
-  const neighborhood =
-    address["suburb"] ??
-    address["neighbourhood"] ??
-    address["quarter"] ??
-    null;
-
-  const normalizedNeighborhood = neighborhood?.toLocaleLowerCase("pt-BR") ?? "";
-  const knownNeighborhood = normalizedNeighborhood.includes("bairro novo")
-    ? "Bairro Novo"
-    : normalizedNeighborhood.includes("centro")
-      ? "Centro"
-      : null;
-  const isMojui = city?.toLocaleLowerCase("pt-BR").includes("mojuí dos campos") ?? false;
-  const isUrban =
-    isMojui &&
-    (result.type === "residential" || distanceInKm(coordinates, MOJUI_URBAN_CENTER) <= 4.5);
-  const deliveryArea = knownNeighborhood ?? (isUrban ? "Centro" : isMojui ? "Zona Rural" : null);
-
-  return { neighborhood, city, deliveryArea };
 }
 
 function extractText(message: Record<string, any> | undefined): string {
@@ -143,6 +72,7 @@ export const Route = createFileRoute("/api/public/whatsapp")({
         let text = String(extractText(message) ?? "").trim();
         const coordinates = extractCoordinates(message);
         if (coordinates) {
+          const { identifyLocationAddress } = await import("@/lib/delivery-location.server");
           const locationAddress = await identifyLocationAddress(coordinates).catch(() => ({
             neighborhood: null,
             city: null,
@@ -364,7 +294,7 @@ export const Route = createFileRoute("/api/public/whatsapp")({
           }
         } catch (error) {
           console.error("Atendente de IA falhou", error instanceof Error ? error.message : "erro desconhecido");
-          await reply("Tive uma instabilidade aqui. Pode mandar sua mensagem de novo, por favor? 🙏");
+          await reply("Tive uma instabilidade aqui. Pode mandar sua mensagem de novo, por favor? 🙏").catch(() => null);
         }
 
         await supabaseAdmin

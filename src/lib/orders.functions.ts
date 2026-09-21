@@ -4,6 +4,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { evolutionBaseUrl } from "./evolution-url";
 import { isStoreOpenNow } from "./store-hours";
 import { validateAndPriceItems } from "./order-validation.server";
+import { coordinatesFromMapsUrl, identifyLocationAddress } from "./delivery-location.server";
 
 const itemSchema = z.object({
   name: z.string().trim().min(1).max(160),
@@ -115,17 +116,21 @@ export const createOrder = createServerFn({ method: "POST" })
     if (data.orderType === "delivery") {
       if (settings.use_flat_fee) {
         deliveryFee = Number(settings.flat_delivery_fee);
-      } else if (data.neighborhood) {
+      } else {
+        let deliveryArea = data.neighborhood;
+        if (!deliveryArea && data.locationUrl) {
+          const coordinates = coordinatesFromMapsUrl(data.locationUrl);
+          if (coordinates) deliveryArea = (await identifyLocationAddress(coordinates)).deliveryArea ?? "";
+        }
+        if (!deliveryArea) throw new Error("Não foi possível identificar a área de entrega. Selecione o bairro.");
         const { data: zone } = await supabaseAdmin
           .from("delivery_zones")
           .select("fee")
-          .eq("name", data.neighborhood)
+          .ilike("name", deliveryArea)
           .eq("active", true)
           .maybeSingle();
         if (!zone) throw new Error("Selecione um bairro de entrega válido.");
         deliveryFee = Number(zone.fee);
-      } else {
-        throw new Error("Selecione um bairro de entrega válido.");
       }
 
       if (!hasGeoLocation && data.address.trim().length < 5) {
