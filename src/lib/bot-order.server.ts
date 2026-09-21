@@ -1,0 +1,143 @@
+import { z } from "zod";
+
+const brl = (value: number) =>
+  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const botOrderSchema = z.object({
+  customerName: z.string().trim().min(1).max(80).default("Cliente WhatsApp"),
+  orderType: z.enum(["delivery", "pickup"]).default("delivery"),
+  address: z.string().trim().max(400).default(""),
+  neighborhood: z.string().trim().max(80).default(""),
+  reference: z.string().trim().max(200).default(""),
+  paymentMethod: z.enum(["pix", "cash", "card"]).default("pix"),
+  changeFor: z.number().min(0).max(100000).nullable().default(null),
+  notes: z.string().trim().max(300).default(""),
+  items: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(160),
+        size: z.string().trim().max(40).default(""),
+        qty: z.number().int().min(1).max(50),
+        unitPrice: z.number().min(0).max(10000),
+        notes: z.string().trim().max(200).default(""),
+      }),
+    )
+    .min(1)
+    .max(60),
+});
+
+export type BotOrder = z.infer<typeof botOrderSchema>;
+
+export const ORDER_MARKER = "###PEDIDO###";
+
+/** Separa o texto normal da resposta do bloco JSON do pedido, quando existir. */
+export function parseBotOrder(answer: string): { text: string; order: BotOrder | null } {
+  const index = answer.indexOf(ORDER_MARKER);
+  if (index === -1) return { text: answer, order: null };
+
+  const text = answer.slice(0, index).trim();
+  const rest = answer.slice(index + ORDER_MARKER.length);
+  const start = rest.indexOf("{");
+  const end = rest.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return { text, order: null };
+
+  try {
+    const parsed = botOrderSchema.parse(JSON.parse(rest.slice(start, end + 1)));
+    return { text, order: parsed };
+  } catch (error) {
+    console.error("JSON de pedido inválido do bot", error);
+    return { text, order: null };
+  }
+}
+
+function normalizePhone(raw: string) {
+  const digits = raw.replace(/\D/g, "");
+  return digits.startsWith("55") ? digits : `55${digits}`;
+}
+
+/** Registra o pedido fechado pelo robô, para ele aparecer (e ser impresso) no painel. */
+export async function createBotOrder(order: BotOrder, phone: string) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: settings } = await supabaseAdmin
+    .from("store_settings")
+    .select("*")
+    .limit(1)
+    .maybeSingle();
+
+  if (!settings?.is_open) {
+    return { ok: false as const, error: "loja_fechada" };
+  }
+
+  let deliveryFee = 0;
+  if (order.orderType === "delivery") {
+    if (settings.use_flat_fee) {
+      deliveryFee = Number(settings.flat_delivery_fee ?? 0);
+    } else if (order.neighborhood) {
+      const { data: zone } = await supabaseAdmin
+        .from("delivery_zones")
+        .select("fee")
+        .ilike("name", order.neighborhood)
+        .eq("active", true)
+        .maybeSingle();
+      deliveryFee = Number(zone?.fee ?? 0);
+    }
+  }
+
+  const subtotal = order.items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
+  const total = subtotal + deliveryFee;
+
+  const noteParts = [
+    "Pedido feito pelo atendente de IA no WhatsApp",
+    order.reference ? `Referência: ${order.reference}` : "",
+    order.notes,
+  ].filter(Boolean);
+
+  const { data: created, error } = await supabaseAdmin
+    .from("orders")
+    .insert({
+      customer_name: order.customerName,
+      customer_phone: normalizePhone(phone),
+      order_type: order.orderType,
+      address: order.orderType === "delivery" ? order.address : "",
+      neighborhood: order.orderType === "delivery" ? order.neighborhood : "",
+      delivery_fee: deliveryFee,
+      payment_method: order.paymentMethod,
+      change_for: order.paymentMethod === "cash" ? order.changeFor : null,
+      items: order.items,
+      subtotal,
+      total,
+      notes: noteParts.join(" | ").slice(0, 300),
+    })
+    .select("code, total")
+    .single();
+
+  if (error || !created) {
+    console.error("Não foi possível registrar o pedido do bot", error);
+    return { ok: false as const, error: "falha" };
+  }
+
+  const summary = [
+    `Pedido *#${created.code}* confirmado! ✅`,
+    "",
+    ...order.items.map(
+      (item) => `• ${item.qty}x ${item.name}${item.size ? ` (${item.size})` : ""} — ${brl(item.qty * item.unitPrice)}`,
+    ),
+    ...(deliveryFee > 0 ? [`Entrega: ${brl(deliveryFee)}`] : []),
+    `*Total: ${brl(total)}*`,
+    "",
+    "Já enviamos para a cozinha. Depois de confirmado não dá mais para alterar — se precisar de algo a mais, é só fazer um novo pedido. 🍕",
+  ].join("\n");
+
+  // avisa a loja
+  if (settings.notify_store && settings.store_whatsapp) {
+    try {
+      const { sendWhatsapp } = await import("@/lib/whatsapp.server");
+      await sendWhatsapp(settings.store_whatsapp, `🔔 *NOVO PEDIDO (WhatsApp IA)*\n\n${summary}`);
+    } catch (error) {
+      console.error("Falha ao avisar a loja", error);
+    }
+  }
+
+  return { ok: true as const, code: created.code, total, summary };
+}
