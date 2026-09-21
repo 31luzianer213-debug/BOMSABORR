@@ -2,14 +2,73 @@ import { createFileRoute } from "@tanstack/react-router";
 
 type EvolutionPayload = { event?: string; data?: Record<string, any> };
 
-function extractText(message: Record<string, any> | undefined): string {
+function cleanAddressPart(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+async function reverseGeocodeNeighborhood(lat: number, lng: number): Promise<{
+  neighborhood: string;
+  displayName: string;
+} | null> {
+  try {
+    const params = new URLSearchParams({
+      format: "jsonv2",
+      lat: String(lat),
+      lon: String(lng),
+      addressdetails: "1",
+      zoom: "18",
+      "accept-language": "pt-BR",
+    });
+    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "BomSaborWhatsAppBot/1.0",
+      },
+    });
+    if (!response.ok) return null;
+
+    const data = (await response.json()) as {
+      display_name?: string;
+      address?: Record<string, string | undefined>;
+    };
+    const address = data.address ?? {};
+    const neighborhood =
+      cleanAddressPart(address["neighbourhood"]) ||
+      cleanAddressPart(address["suburb"]) ||
+      cleanAddressPart(address["quarter"]) ||
+      cleanAddressPart(address["city_district"]);
+
+    if (!neighborhood) return null;
+    return {
+      neighborhood,
+      displayName: cleanAddressPart(data.display_name),
+    };
+  } catch (error) {
+    console.warn("Não foi possível identificar o bairro pela localização", error);
+    return null;
+  }
+}
+
+async function extractText(message: Record<string, any> | undefined): Promise<string> {
   if (!message) return "";
   const loc = message["locationMessage"] ?? message["liveLocationMessage"];
   if (loc?.["degreesLatitude"] != null && loc?.["degreesLongitude"] != null) {
-    const lat = loc["degreesLatitude"];
-    const lng = loc["degreesLongitude"];
+    const lat = Number(loc["degreesLatitude"]);
+    const lng = Number(loc["degreesLongitude"]);
     const extra = [loc["name"], loc["address"], loc["comment"]].filter(Boolean).join(" - ");
-    return `[Localização enviada pelo cliente] https://www.google.com/maps?q=${lat},${lng}${extra ? ` (${extra})` : ""}`;
+    const resolved =
+      Number.isFinite(lat) && Number.isFinite(lng)
+        ? await reverseGeocodeNeighborhood(lat, lng)
+        : null;
+    const locationDetails = [
+      resolved?.neighborhood ? `Bairro identificado automaticamente: ${resolved.neighborhood}` : "",
+      resolved?.displayName ? `Endereço aproximado: ${resolved.displayName}` : "",
+      extra,
+    ]
+      .filter(Boolean)
+      .join(" | ");
+
+    return `[Localização enviada pelo cliente] https://www.google.com/maps?q=${lat},${lng}${locationDetails ? ` (${locationDetails})` : ""}`;
   }
   return (
     message["conversation"] ??
@@ -57,7 +116,7 @@ export const Route = createFileRoute("/api/public/whatsapp")({
         await markWhatsappRead(key).catch(() => null);
         await showWhatsappPresence(phone, isAudio ? "recording" : "composing").catch(() => null);
 
-        let text = String(extractText(message) ?? "").trim();
+        let text = String((await extractText(message)) ?? "").trim();
         if (isAudio) {
           const media = await getWhatsappMediaBase64(data);
           if (!media.ok) return new Response("ok");
