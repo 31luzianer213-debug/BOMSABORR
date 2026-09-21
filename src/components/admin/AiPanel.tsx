@@ -28,7 +28,6 @@ export function AiPanel() {
   const [enabled, setEnabled] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [greeting, setGreeting] = useState("");
-  const [keywords, setKeywords] = useState("");
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -38,7 +37,6 @@ export function AiPanel() {
     setEnabled(settings.data.isEnabled);
     setPrompt(settings.data.systemPrompt);
     setGreeting(settings.data.greeting);
-    setKeywords((settings.data.handoffKeywords ?? []).join(", "));
   }, [settings.data]);
 
   const messages = useQuery({
