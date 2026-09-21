@@ -27,6 +27,13 @@ export async function buildMenuContext(): Promise<string> {
         : "Taxa de entrega varia por bairro (veja lista abaixo)",
     );
     lines.push(`Retirada na loja: ${s.allow_pickup ? "disponível" : "indisponível"}`);
+    if (s.pay_pix && s.pix_key) {
+      lines.push(`Pagamento via Pix: disponível`);
+      lines.push(`Chave Pix: ${s.pix_key}${s.pix_name ? ` (${s.pix_name})` : ""}`);
+      lines.push("Política do Pix: informe a chave imediatamente quando o cliente escolher Pix ou pedir a chave; nunca espere o motoboy sair.");
+    } else {
+      lines.push("Pagamento via Pix: indisponível");
+    }
     lines.push(`Pizza meia a meia: ${s.allow_half_half ? "permitida (vale o valor da metade mais cara)" : "não permitida"}`);
   }
 
@@ -74,6 +81,7 @@ export function buildSystemPrompt(options: {
     "Responda em português do Brasil, com mensagens curtas, simpáticas e objetivas (no máximo 6 linhas).",
     "Use SOMENTE os preços e itens do cardápio abaixo. Nunca invente sabores, preços, prazos ou promoções.",
     "Ajude o cliente a escolher, some o valor do pedido e confirme endereço, forma de pagamento e se é entrega ou retirada.",
+    "Quando o cliente escolher Pix ou pedir a chave, informe imediatamente a chave Pix presente no contexto. Nunca diga que ela será enviada somente depois que o motoboy sair.",
     `Quando fizer sentido, mande o link do cardápio para o cliente montar o pedido: ${options.menuUrl}`,
     "Se o cliente pedir para falar com uma pessoa, ou se você não souber responder, responda SOMENTE com a palavra TRANSFERIR.",
     options.businessPrompt ? `Instruções do dono da loja:\n${options.businessPrompt}` : "",
