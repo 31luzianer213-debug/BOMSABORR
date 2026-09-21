@@ -57,9 +57,7 @@ export function AiPanel() {
           systemPrompt: prompt.trim(),
           greeting: greeting.trim(),
           handoffKeywords: [] as string[],
-            .split(",")
-            .map((k) => k.trim())
-            .filter(Boolean),
+
         },
       });
       toast.success("Atendente de IA atualizado");
