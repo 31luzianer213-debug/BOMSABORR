@@ -41,6 +41,7 @@ async function identifyLocationAddress(coordinates: Coordinates): Promise<Locati
   url.searchParams.set("addressdetails", "1");
 
   const response = await fetch(url, {
+    signal: AbortSignal.timeout(8_000),
     headers: {
       Accept: "application/json",
       "User-Agent": "BomSabor-Pedidos/1.0",
@@ -211,21 +212,44 @@ export const Route = createFileRoute("/api/public/whatsapp")({
           if (alreadyHandled) return new Response("ok");
         }
 
-        await supabaseAdmin.from("wa_messages").insert({
+        const { data: claimed } = await supabaseAdmin.rpc("claim_wa_conversation", {
+          _conversation_id: conversationId,
+        });
+        if (!claimed) return new Response("ok");
+        const releaseConversation = async () => {
+          await supabaseAdmin.rpc("release_wa_conversation", { _conversation_id: conversationId as string });
+        };
+
+        const { error: inboundError } = await supabaseAdmin.from("wa_messages").insert({
           conversation_id: conversationId,
           direction: "inbound",
           content: text,
           external_id: externalId || null,
+          webhook_status: "processing",
         });
+        if (inboundError?.code === "23505") {
+          await releaseConversation();
+          return new Response("ok");
+        }
+        if (inboundError) {
+          await releaseConversation();
+          throw inboundError;
+        }
 
-        if (existing?.bot_paused) return new Response("ok");
+        if (existing?.bot_paused) {
+          await releaseConversation();
+          return new Response("ok");
+        }
 
         const { data: settings } = await supabaseAdmin
           .from("ai_settings")
           .select("is_enabled, system_prompt, greeting, handoff_keywords")
           .limit(1)
           .maybeSingle();
-        if (!settings?.is_enabled) return new Response("ok");
+        if (!settings?.is_enabled) {
+          await releaseConversation();
+          return new Response("ok");
+        }
 
         const reply = async (message: string) => {
           if (isAudio) {
@@ -325,9 +349,9 @@ export const Route = createFileRoute("/api/public/whatsapp")({
           }
 
           if (order) {
-            const result = await createBotOrder(order, phone);
+            const result = await createBotOrder(order, phone, externalId || undefined);
             if (result.ok) {
-              await reply(result.summary);
+              if (result.summary) await reply(result.summary);
             } else if (result.error === "loja_fechada") {
               await reply("Poxa, a loja acabou de fechar e não consigo registrar o pedido agora. 😕");
             } else {
@@ -339,11 +363,15 @@ export const Route = createFileRoute("/api/public/whatsapp")({
             await reply("Pode repetir, por favor? Não consegui entender. 🙂");
           }
         } catch (error) {
-          console.error("Atendente de IA falhou", error);
+          console.error("Atendente de IA falhou", error instanceof Error ? error.message : "erro desconhecido");
           await reply("Tive uma instabilidade aqui. Pode mandar sua mensagem de novo, por favor? 🙏");
         }
 
-
+        await supabaseAdmin
+          .from("wa_messages")
+          .update({ webhook_status: "done" })
+          .eq("external_id", externalId || "");
+        await releaseConversation();
         return new Response("ok");
       },
     },

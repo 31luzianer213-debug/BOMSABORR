@@ -251,6 +251,11 @@ function AdminPage() {
   }, [zones.data, zoneSearch]);
 
   function exportOrdersCsv() {
+    const csvCell = (value: unknown) => {
+      let text = String(value ?? "").replace(/\r?\n/g, " ");
+      if (/^[=+\-@]/.test(text)) text = `'${text}`;
+      return `"${text.replace(/"/g, '""')}"`;
+    };
     const rows = filteredOrders.map((order) => ({
       codigo: order.code,
       cliente: order.customer_name,
@@ -265,8 +270,8 @@ function AdminPage() {
       toast.error("Nenhum pedido para exportar.");
       return;
     }
-    const header = Object.keys(rows[0]!).join(";");
-    const csv = [header, ...rows.map((row) => Object.values(row).join(";"))].join("\n");
+    const header = Object.keys(rows[0]!).map(csvCell).join(";");
+    const csv = [header, ...rows.map((row) => Object.values(row).map(csvCell).join(";"))].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -278,6 +283,14 @@ function AdminPage() {
   }
 
   function printOrder(order: (typeof filteredOrders)[number]) {
+    const escapeHtml = (value: unknown) =>
+      String(value ?? "").replace(/[&<>"']/g, (character) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+      })[character] ?? character);
     const items = (order.items as { name: string; qty: number; size: string; notes: string; unitPrice?: number }[]) ?? [];
     const store = settings.data?.store_name ?? "Bom Sabor";
     const win = window.open("", "_blank", "width=420,height=700");
@@ -287,7 +300,7 @@ function AdminPage() {
     }
     const date = new Date(order.created_at).toLocaleString("pt-BR");
     const itemsRows = items
-      .map((item) => `<tr><td style="padding:6px 0;border-bottom:1px dashed #ddd"><strong>${item.qty}x ${item.name}</strong>${item.size ? ` <span style="color:#666">(${item.size})</span>` : ""}${item.notes ? `<br><em style="font-size:11px;color:#666">Obs: ${item.notes}</em>` : ""}</td><td style="text-align:right;padding:6px 0;border-bottom:1px dashed #ddd;font-weight:700">${item.unitPrice ? brl(Number(item.unitPrice) * item.qty) : ""}</td></tr>`)
+      .map((item) => `<tr><td style="padding:6px 0;border-bottom:1px dashed #ddd"><strong>${escapeHtml(item.qty)}x ${escapeHtml(item.name)}</strong>${item.size ? ` <span style="color:#666">(${escapeHtml(item.size)})</span>` : ""}${item.notes ? `<br><em style="font-size:11px;color:#666">Obs: ${escapeHtml(item.notes)}</em>` : ""}</td><td style="text-align:right;padding:6px 0;border-bottom:1px dashed #ddd;font-weight:700">${item.unitPrice ? brl(Number(item.unitPrice) * item.qty) : ""}</td></tr>`)
       .join("");
     win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Comprovante #${order.code}</title>
       <style>
@@ -304,15 +317,15 @@ function AdminPage() {
         @media print{body{padding:0} .no-print{display:none} .receipt{border:none}}
       </style></head><body>
       <div class="receipt">
-        <h1>${store}</h1>
-        <p class="center muted">${settings.data?.address ?? ""} • ${settings.data?.store_whatsapp ?? ""}</p>
+         <h1>${escapeHtml(store)}</h1>
+         <p class="center muted">${escapeHtml(settings.data?.address)} • ${escapeHtml(settings.data?.store_whatsapp)}</p>
         <p class="center" style="margin-top:8px;font-weight:800">COMPROVANTE DE PEDIDO</p>
-        <p class="center muted">#${order.code} • ${date}</p>
+         <p class="center muted">#${escapeHtml(order.code)} • ${escapeHtml(date)}</p>
         <hr style="margin:10px 0;border:none;border-top:1px dashed #999">
-        <p style="font-size:13px"><strong>Cliente:</strong> ${order.customer_name} — ${order.customer_phone}</p>
-        <p style="font-size:13px"><strong>${order.order_type === "delivery" ? "Entrega" : "Retirada"}:</strong> ${order.order_type === "delivery" ? `${order.address} — ${order.neighborhood}` : "Retirada no local"}</p>
-        <p style="font-size:13px"><strong>Pagamento:</strong> ${order.payment_method}${order.change_for ? ` (troco p/ ${brl(Number(order.change_for))})` : ""}</p>
-        ${order.notes ? `<p style="font-size:12px;margin-top:6px"><em>Obs: ${order.notes}</em></p>` : ""}
+         <p style="font-size:13px"><strong>Cliente:</strong> ${escapeHtml(order.customer_name)} — ${escapeHtml(order.customer_phone)}</p>
+         <p style="font-size:13px"><strong>${order.order_type === "delivery" ? "Entrega" : "Retirada"}:</strong> ${order.order_type === "delivery" ? `${escapeHtml(order.address)} — ${escapeHtml(order.neighborhood)}` : "Retirada no local"}</p>
+         <p style="font-size:13px"><strong>Pagamento:</strong> ${escapeHtml(order.payment_method)}${order.change_for ? ` (troco p/ ${brl(Number(order.change_for))})` : ""}</p>
+         ${order.notes ? `<p style="font-size:12px;margin-top:6px"><em>Obs: ${escapeHtml(order.notes)}</em></p>` : ""}
         <table><tbody>${itemsRows}</tbody></table>
         <div class="totals">
           <div class="row"><span>Subtotal</span><span>${brl(Number(order.subtotal))}</span></div>
