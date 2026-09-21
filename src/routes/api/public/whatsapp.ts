@@ -2,6 +2,46 @@ import { createFileRoute } from "@tanstack/react-router";
 
 type EvolutionPayload = { event?: string; data?: Record<string, any> };
 
+type Coordinates = { latitude: number; longitude: number };
+
+function extractCoordinates(message: Record<string, any> | undefined): Coordinates | null {
+  const loc = message?.["locationMessage"] ?? message?.["liveLocationMessage"];
+  const latitude = Number(loc?.["degreesLatitude"]);
+  const longitude = Number(loc?.["degreesLongitude"]);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  return { latitude, longitude };
+}
+
+async function identifyNeighborhood(coordinates: Coordinates): Promise<string | null> {
+  const url = new URL("https://nominatim.openstreetmap.org/reverse");
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("lat", String(coordinates.latitude));
+  url.searchParams.set("lon", String(coordinates.longitude));
+  url.searchParams.set("zoom", "18");
+  url.searchParams.set("addressdetails", "1");
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "BomSabor-Pedidos/1.0",
+    },
+  });
+  if (!response.ok) return null;
+
+  const result = (await response.json()) as {
+    address?: Record<string, string | undefined>;
+  };
+  const address = result.address;
+  if (!address) return null;
+  return (
+    address["suburb"] ??
+    address["neighbourhood"] ??
+    address["quarter"] ??
+    address["city_district"] ??
+    null
+  );
+}
+
 function extractText(message: Record<string, any> | undefined): string {
   if (!message) return "";
   const loc = message["locationMessage"] ?? message["liveLocationMessage"];
@@ -58,6 +98,11 @@ export const Route = createFileRoute("/api/public/whatsapp")({
         await showWhatsappPresence(phone, isAudio ? "recording" : "composing").catch(() => null);
 
         let text = String(extractText(message) ?? "").trim();
+        const coordinates = extractCoordinates(message);
+        if (coordinates) {
+          const neighborhood = await identifyNeighborhood(coordinates).catch(() => null);
+          if (neighborhood) text += ` [Bairro identificado pela localização: ${neighborhood}]`;
+        }
         if (isAudio) {
           const media = await getWhatsappMediaBase64(data);
           if (!media.ok) return new Response("ok");

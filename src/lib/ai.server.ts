@@ -57,7 +57,7 @@ export async function generateAiSpeech(text: string): Promise<string> {
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model: "openai/gpt-4o-mini-tts",
-      voice: "shimmer",
+      voice: "coral",
       input: text,
       instructions:
         "Fale em português do Brasil como uma atendente real e acolhedora de pizzaria. Use ritmo de conversa levemente mais lento, pausas naturais, respiração discreta e entonação variada. Não soe como locução, anúncio, leitura de roteiro ou robô. Seja espontânea e simpática, sem exagerar na animação. Leia valores e endereços de forma natural.",
