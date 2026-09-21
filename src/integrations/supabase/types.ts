@@ -200,6 +200,7 @@ export type Database = {
           notes: string
           order_type: string
           payment_method: string
+          source_external_id: string | null
           status: string
           subtotal: number
           total: number
@@ -225,6 +226,7 @@ export type Database = {
           notes?: string
           order_type?: string
           payment_method?: string
+          source_external_id?: string | null
           status?: string
           subtotal?: number
           total?: number
@@ -250,6 +252,7 @@ export type Database = {
           notes?: string
           order_type?: string
           payment_method?: string
+          source_external_id?: string | null
           status?: string
           subtotal?: number
           total?: number
@@ -410,6 +413,8 @@ export type Database = {
           last_message_at: string
           last_message_preview: string | null
           phone: string
+          processing: boolean
+          processing_started_at: string | null
           status: string
         }
         Insert: {
@@ -420,6 +425,8 @@ export type Database = {
           last_message_at?: string
           last_message_preview?: string | null
           phone: string
+          processing?: boolean
+          processing_started_at?: string | null
           status?: string
         }
         Update: {
@@ -430,6 +437,8 @@ export type Database = {
           last_message_at?: string
           last_message_preview?: string | null
           phone?: string
+          processing?: boolean
+          processing_started_at?: string | null
           status?: string
         }
         Relationships: []
@@ -442,6 +451,7 @@ export type Database = {
           direction: string
           external_id: string | null
           id: string
+          webhook_status: string
         }
         Insert: {
           content?: string
@@ -450,6 +460,7 @@ export type Database = {
           direction: string
           external_id?: string | null
           id?: string
+          webhook_status?: string
         }
         Update: {
           content?: string
@@ -458,6 +469,7 @@ export type Database = {
           direction?: string
           external_id?: string | null
           id?: string
+          webhook_status?: string
         }
         Relationships: [
           {
@@ -474,12 +486,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_wa_conversation: {
+        Args: { _conversation_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      release_wa_conversation: {
+        Args: { _conversation_id: string }
+        Returns: undefined
       }
     }
     Enums: {
