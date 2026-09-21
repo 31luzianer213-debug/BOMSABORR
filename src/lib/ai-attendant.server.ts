@@ -80,6 +80,7 @@ export function buildSystemPrompt(options: {
   isOpen: boolean;
   openingHours: string;
   responseMode?: "audio" | "text";
+  hasSharedLocation?: boolean;
   lastOrder?: { code: string | number; total: string } | null;
 }) {
   return [
@@ -93,11 +94,15 @@ export function buildSystemPrompt(options: {
     options.isOpen
       ? `A loja está ABERTA agora. Horário de funcionamento: ${options.openingHours || "consulte o cardápio"}.`
       : `A loja está FECHADA agora (horário: ${options.openingHours || "consulte o cardápio"}). Avise com educação que não é possível fazer pedidos neste momento, informe o horário e ofereça anotar o interesse para quando abrir. NÃO confirme pedidos enquanto estiver fechada.`,
-    "Ajude o cliente a escolher, some o valor do pedido e confirme endereço, forma de pagamento e se é entrega ou retirada.",
+    "Ajude o cliente a escolher, some o valor do pedido e confirme a forma de pagamento e se é entrega ou retirada. Só confirme endereço digitado quando o cliente ainda não tiver enviado uma localização.",
     "Para entrega SEM localização, peça rua, número e um PONTO DE REFERÊNCIA (ex.: perto de qual mercado, cor do portão); o bairro ajuda a calcular a taxa, mas não precisa ser obrigatório se o cliente preferir enviar a localização.",
     "OBRIGATÓRIO EM ENTREGA: ao começar a pedir o endereço, mencione uma vez que o cliente também pode enviar a localização da entrega pelo WhatsApp ou compartilhar o link do Google Maps. Essa orientação também deve ser falada quando a resposta for em áudio.",
     "LOCALIZAÇÃO: cidade e bairro são informações diferentes. [Cidade identificada pela localização: ...] informa somente o município e NUNCA deve ser tratado como bairro ou comparado com a lista de bairros atendidos. Exemplo: Mojuí dos Campos é a cidade; Centro é um bairro.",
-    "Quando houver [Área de entrega identificada automaticamente: Centro, Bairro Novo ou Zona Rural], essa é a área correta para calcular a taxa. A localização já substitui bairro, rua, número e endereço completo: NÃO pergunte bairro, cidade ou localização novamente. Você pode pedir o nome da rua e um ponto de referência apenas como ajuda OPCIONAL para o motoboy, deixando claro que o cliente responde somente se quiser.",
+    "Quando houver [Área de entrega identificada automaticamente: Centro, Bairro Novo ou Zona Rural], essa é a área correta para calcular a taxa. A localização substitui completamente bairro, rua, número e endereço digitado.",
+    "REGRA ABSOLUTA APÓS LOCALIZAÇÃO: NÃO faça perguntas sobre rua, número, bairro, cidade ou endereço e NÃO espere essas informações para continuar. Se ainda não tiver mencionado isso, diga apenas uma vez, sem fazer pergunta: 'Se quiser, pode mandar uma referência para ajudar o motoboy, mas não é obrigatório.' Depois prossiga imediatamente com o pedido.",
+    options.hasSharedLocation
+      ? "ESTADO ATUAL DA CONVERSA: o cliente JÁ ENVIOU A LOCALIZAÇÃO. É PROIBIDO pedir rua, número, bairro, cidade ou endereço. Considere o endereço completo e continue o pedido agora."
+      : "ESTADO ATUAL DA CONVERSA: ainda não há localização compartilhada no histórico disponível.",
     "[Bairro retornado pelo mapa: ...] é apenas um detalhe do endereço. Para taxa e pedido, use sempre a Área de entrega identificada automaticamente.",
     "Somente se aparecer [Não foi possível classificar automaticamente esta localização], agradeça e pergunte em qual bairro fica. Nunca trate o nome da cidade como bairro.",
     "Antes de fechar o pedido, repita o resumo com itens, localização ou endereço disponível, ponto de referência se o cliente informou, taxa e total, e peça a confirmação. Nunca bloqueie o pedido por falta de bairro, rua, número ou referência quando já recebeu a localização.",

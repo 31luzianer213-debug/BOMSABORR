@@ -287,6 +287,12 @@ export const Route = createFileRoute("/api/public/whatsapp")({
               : null;
 
           const menu = await buildMenuContext();
+          const hasSharedLocation = turns.some(
+            (turn) =>
+              turn.role === "user" &&
+              (/\[Localização enviada pelo cliente\]/i.test(turn.content) ||
+                /(?:google\.(?:com|[a-z.]+)\/maps|maps\.app\.goo\.gl)/i.test(turn.content)),
+          );
           const answer = await generateAiText({
             system: buildSystemPrompt({
               businessPrompt: settings.system_prompt ?? "",
@@ -295,6 +301,7 @@ export const Route = createFileRoute("/api/public/whatsapp")({
               isOpen: Boolean(store && isStoreOpenNow(store.is_open, store.opening_hours)),
               openingHours: store?.opening_hours ?? "",
               responseMode: isAudio ? "audio" : "text",
+              hasSharedLocation,
               lastOrder,
             }),
             turns,
