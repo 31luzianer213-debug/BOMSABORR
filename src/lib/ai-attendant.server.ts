@@ -1,4 +1,5 @@
 import { createPublicClient } from "./menu.functions";
+import { isStoreOpenNow } from "./store-hours";
 
 const brl = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -17,8 +18,9 @@ export async function buildMenuContext(): Promise<string> {
   const lines: string[] = [];
 
   if (s) {
+    const openNow = isStoreOpenNow(s.is_open, s.opening_hours);
     lines.push(`Loja: ${s.store_name}`);
-    lines.push(`Situação agora: ${s.is_open ? "ABERTA" : "FECHADA"}`);
+    lines.push(`Situação agora: ${openNow ? "ABERTA" : "FECHADA"}`);
     if (s.opening_hours) lines.push(`Horário: ${s.opening_hours}`);
     if (s.address) lines.push(`Endereço: ${s.address}`);
     lines.push(

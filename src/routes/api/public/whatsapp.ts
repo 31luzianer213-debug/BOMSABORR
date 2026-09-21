@@ -140,6 +140,7 @@ export const Route = createFileRoute("/api/public/whatsapp")({
 
         try {
           const { buildMenuContext, buildSystemPrompt } = await import("@/lib/ai-attendant.server");
+          const { isStoreOpenNow } = await import("@/lib/store-hours");
           const { generateAiText } = await import("@/lib/ai.server");
           const { parseBotOrder, createBotOrder, extractOrderFromConversation } = await import(
             "@/lib/bot-order.server"
@@ -170,7 +171,7 @@ export const Route = createFileRoute("/api/public/whatsapp")({
               businessPrompt: settings.system_prompt ?? "",
               menu,
               menuUrl: new URL(request.url).origin,
-              isOpen: Boolean(store?.is_open),
+              isOpen: Boolean(store && isStoreOpenNow(store.is_open, store.opening_hours)),
               openingHours: store?.opening_hours ?? "",
               lastOrder,
             }),

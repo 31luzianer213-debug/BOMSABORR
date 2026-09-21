@@ -6,3 +6,4 @@
 - [x] Marcar pedido como entregue no admin e avisar o cliente pelo WhatsApp.
 - [x] Permitir apagar um pedido com confirmação.
 - [x] Corrigir confirmação Pix e apresentação da localização do pedido do site.
+- [x] Calcular automaticamente se a loja está aberta pelo horário de Brasília.

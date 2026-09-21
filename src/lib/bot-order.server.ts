@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isStoreOpenNow } from "./store-hours";
 
 const brl = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -110,7 +111,7 @@ export async function createBotOrder(order: BotOrder, phone: string) {
     .limit(1)
     .maybeSingle();
 
-  if (!settings?.is_open) {
+  if (!settings || !isStoreOpenNow(settings.is_open, settings.opening_hours)) {
     return { ok: false as const, error: "loja_fechada" };
   }
 

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { isStoreOpenNow } from "@/lib/store-hours";
 
 export type StoreSettings = Database["public"]["Tables"]["store_settings"]["Row"];
 export type Category = Database["public"]["Tables"]["categories"]["Row"];
@@ -40,8 +41,15 @@ export const getMenu = createServerFn({ method: "GET" }).handler(async () => {
   if (products.error) throw new Error(products.error.message);
   if (zones.error) throw new Error(zones.error.message);
 
+  const storeSettings = settings.data as StoreSettings | null;
+
   return {
-    settings: settings.data as StoreSettings | null,
+    settings: storeSettings
+      ? {
+          ...storeSettings,
+          is_open: isStoreOpenNow(storeSettings.is_open, storeSettings.opening_hours),
+        }
+      : null,
     categories: (categories.data ?? []) as Category[],
     products: (products.data ?? []) as Product[],
     zones: (zones.data ?? []) as DeliveryZone[],
