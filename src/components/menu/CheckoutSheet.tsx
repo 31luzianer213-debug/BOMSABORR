@@ -113,6 +113,17 @@ export function CheckoutSheet({
       toast.error("Selecione o bairro ou envie sua localização.");
       return;
     }
+    if (paymentOptions.length === 0) {
+      toast.error("A loja não configurou uma forma de pagamento.");
+      return;
+    }
+    if (payment === "cash" && changeFor) {
+      const changeValue = Number(changeFor.replace(",", "."));
+      if (!Number.isFinite(changeValue) || changeValue < total) {
+        toast.error(`O valor para troco deve ser pelo menos ${brl(total)}.`);
+        return;
+      }
+    }
 
     setSending(true);
     try {
@@ -126,7 +137,7 @@ export function CheckoutSheet({
           locationUrl: mapsLink,
           neighborhood,
           paymentMethod: payment,
-          changeFor: payment === "cash" && changeFor ? Number(changeFor) : null,
+           changeFor: payment === "cash" && changeFor ? Number(changeFor.replace(",", ".")) : null,
           notes: notes.trim(),
           items: items.map((item) => ({
             name: item.name,
@@ -341,6 +352,9 @@ export function CheckoutSheet({
                   {option.label}
                 </Button>
               ))}
+              {paymentOptions.length === 0 && (
+                <p className="text-sm text-destructive">Nenhuma forma de pagamento está disponível.</p>
+              )}
             </div>
           </div>
 
@@ -352,7 +366,7 @@ export function CheckoutSheet({
                 inputMode="decimal"
                 placeholder="50"
                 value={changeFor}
-                onChange={(event) => setChangeFor(event.target.value)}
+                onChange={(event) => setChangeFor(event.target.value.replace(/[^\d,.]/g, ""))}
               />
             </div>
           )}
@@ -390,7 +404,7 @@ export function CheckoutSheet({
           </div>
           <Button
             className="mt-3 w-full font-display text-lg"
-            disabled={sending || items.length === 0}
+            disabled={sending || items.length === 0 || paymentOptions.length === 0}
             onClick={handleSubmit}
           >
             {sending ? "Enviando..." : "Enviar pedido no WhatsApp"}
