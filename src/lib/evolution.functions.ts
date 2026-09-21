@@ -395,3 +395,21 @@ export const ensureAndConnectEvolution = createServerFn({ method: "POST" })
       code: conn.code ?? conn.pairingCode ?? conn.qrcode?.code ?? null,
     };
   });
+
+/** Aponta o WhatsApp (Evolution) para o endereço que ativa o atendente de IA. */
+export const configureAiWebhook = createServerFn({ method: "POST" })
+  .middleware([requireEvolutionAdmin])
+  .inputValidator((input: { baseUrl: string }) => z.object({ baseUrl: z.string().url() }).parse(input))
+  .handler(async ({ data }) => {
+    const token = process.env["WHATSAPP_WEBHOOK_TOKEN"];
+    if (!token) throw new Error("O código de segurança do atendente de IA não está configurado.");
+    const { defaultInstance } = getEvolutionConfig();
+    const url = `${data.baseUrl.replace(/\/+$/, "")}/api/public/whatsapp?token=${token}`;
+    await evolutionFetch(`/webhook/set/${encodeURIComponent(defaultInstance)}`, {
+      method: "POST",
+      body: JSON.stringify({
+        webhook: { enabled: true, url, byEvents: false, base64: false, events: ["MESSAGES_UPSERT"] },
+      }),
+    });
+    return { ok: true as const, instance: defaultInstance };
+  });
