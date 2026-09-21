@@ -861,6 +861,11 @@ function AdminPage() {
             <WhatsAppPanel />
           </TabsContent>
 
+          <TabsContent value="ia" className="space-y-3">
+            <AiPanel />
+          </TabsContent>
+
+
           <TabsContent value="settings">
             {settings.data && (
               <form
