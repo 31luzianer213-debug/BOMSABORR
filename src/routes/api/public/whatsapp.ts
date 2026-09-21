@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 type EvolutionPayload = { event?: string; data?: Record<string, any> };
 
 type Coordinates = { latitude: number; longitude: number };
+type LocationAddress = { neighborhood: string | null; city: string | null };
 
 function extractCoordinates(message: Record<string, any> | undefined): Coordinates | null {
   const loc = message?.["locationMessage"] ?? message?.["liveLocationMessage"];
@@ -12,7 +13,7 @@ function extractCoordinates(message: Record<string, any> | undefined): Coordinat
   return { latitude, longitude };
 }
 
-async function identifyNeighborhood(coordinates: Coordinates): Promise<string | null> {
+async function identifyLocationAddress(coordinates: Coordinates): Promise<LocationAddress> {
   const url = new URL("https://nominatim.openstreetmap.org/reverse");
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("lat", String(coordinates.latitude));
@@ -26,20 +27,27 @@ async function identifyNeighborhood(coordinates: Coordinates): Promise<string | 
       "User-Agent": "BomSabor-Pedidos/1.0",
     },
   });
-  if (!response.ok) return null;
+  if (!response.ok) return { neighborhood: null, city: null };
 
   const result = (await response.json()) as {
     address?: Record<string, string | undefined>;
   };
   const address = result.address;
-  if (!address) return null;
-  return (
+  if (!address) return { neighborhood: null, city: null };
+
+  const city =
+    address["city"] ??
+    address["town"] ??
+    address["municipality"] ??
+    address["village"] ??
+    null;
+  const neighborhood =
     address["suburb"] ??
     address["neighbourhood"] ??
     address["quarter"] ??
-    address["city_district"] ??
-    null
-  );
+    null;
+
+  return { neighborhood, city };
 }
 
 function extractText(message: Record<string, any> | undefined): string {
@@ -100,8 +108,16 @@ export const Route = createFileRoute("/api/public/whatsapp")({
         let text = String(extractText(message) ?? "").trim();
         const coordinates = extractCoordinates(message);
         if (coordinates) {
-          const neighborhood = await identifyNeighborhood(coordinates).catch(() => null);
-          if (neighborhood) text += ` [Bairro identificado pela localização: ${neighborhood}]`;
+          const locationAddress = await identifyLocationAddress(coordinates).catch(() => ({
+            neighborhood: null,
+            city: null,
+          }));
+          if (locationAddress.city) text += ` [Cidade identificada pela localização: ${locationAddress.city}]`;
+          if (locationAddress.neighborhood) {
+            text += ` [Bairro identificado pela localização: ${locationAddress.neighborhood}]`;
+          } else {
+            text += " [O mapa não informou o bairro; pergunte ao cliente se é Centro ou qual é o bairro]";
+          }
         }
         if (isAudio) {
           const media = await getWhatsappMediaBase64(data);
