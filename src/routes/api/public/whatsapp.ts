@@ -119,23 +119,6 @@ export const Route = createFileRoute("/api/public/whatsapp")({
             .eq("id", conversationId);
         };
 
-        const handoff = async () => {
-          await supabaseAdmin
-            .from("wa_conversations")
-            .update({ bot_paused: true, status: "pending" })
-            .eq("id", conversationId);
-          await reply("Só um instante, já vou chamar alguém da nossa equipe para te atender! 🙂");
-        };
-
-        const normalized = text.toLowerCase();
-        const asksForHuman = (settings.handoff_keywords ?? []).some(
-          (keyword: string) => keyword && normalized.includes(keyword.toLowerCase()),
-        );
-        if (asksForHuman) {
-          await handoff();
-          return new Response("ok");
-        }
-
         if (isNew && settings.greeting?.trim()) {
           await reply(settings.greeting.trim());
         }
@@ -158,24 +141,62 @@ export const Route = createFileRoute("/api/public/whatsapp")({
         try {
           const { buildMenuContext, buildSystemPrompt } = await import("@/lib/ai-attendant.server");
           const { generateAiText } = await import("@/lib/ai.server");
+          const { parseBotOrder, createBotOrder } = await import("@/lib/bot-order.server");
+
+          const [{ data: store }, { data: recentOrders }] = await Promise.all([
+            supabaseAdmin.from("store_settings").select("is_open, opening_hours").limit(1).maybeSingle(),
+            supabaseAdmin
+              .from("orders")
+              .select("code, total, created_at")
+              .ilike("customer_phone", `%${phone.slice(-8)}`)
+              .order("created_at", { ascending: false })
+              .limit(1),
+          ]);
+
+          const last = (recentOrders ?? [])[0];
+          const lastOrder =
+            last && Date.now() - new Date(last.created_at).getTime() < 3 * 60 * 60 * 1000
+              ? {
+                  code: last.code,
+                  total: Number(last.total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+                }
+              : null;
+
           const menu = await buildMenuContext();
           const answer = await generateAiText({
             system: buildSystemPrompt({
               businessPrompt: settings.system_prompt ?? "",
               menu,
               menuUrl: new URL(request.url).origin,
+              isOpen: Boolean(store?.is_open),
+              openingHours: store?.opening_hours ?? "",
+              lastOrder,
             }),
             turns,
           });
-          if (!answer || answer.trim().toUpperCase().startsWith("TRANSFERIR")) {
-            await handoff();
-          } else {
-            await reply(answer);
+
+          const { text: visible, order } = parseBotOrder(answer ?? "");
+          if (visible) await reply(visible);
+
+          if (order) {
+            const result = await createBotOrder(order, phone);
+            if (result.ok) {
+              await reply(result.summary);
+            } else if (result.error === "loja_fechada") {
+              await reply("Poxa, a loja acabou de fechar e não consigo registrar o pedido agora. 😕");
+            } else {
+              await reply("Tive um probleminha para registrar o pedido. Pode confirmar novamente, por favor?");
+            }
+          }
+
+          if (!visible && !order) {
+            await reply("Pode repetir, por favor? Não consegui entender. 🙂");
           }
         } catch (error) {
           console.error("Atendente de IA falhou", error);
-          await handoff();
+          await reply("Tive uma instabilidade aqui. Pode mandar sua mensagem de novo, por favor? 🙏");
         }
+
 
         return new Response("ok");
       },
