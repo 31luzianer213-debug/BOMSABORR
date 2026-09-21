@@ -47,6 +47,7 @@ export function CheckoutSheet({
     settings.allow_delivery ? "delivery" : "pickup",
   );
   const [address, setAddress] = useState("");
+  const [reference, setReference] = useState("");
   const [mapsLink, setMapsLink] = useState("");
   const [locating, setLocating] = useState(false);
 
@@ -104,8 +105,8 @@ export function CheckoutSheet({
       toast.error("Informe um WhatsApp válido com DDD.");
       return;
     }
-    if (orderType === "delivery" && !mapsLink && address.trim().length < 5) {
-      toast.error("Informe o endereço de entrega ou envie sua localização.");
+    if (orderType === "delivery" && address.trim().length < 5) {
+      toast.error("Informe o endereço de entrega.");
       return;
     }
     if (orderType === "delivery" && !mapsLink && !settings.use_flat_fee && !neighborhood) {
@@ -120,8 +121,9 @@ export function CheckoutSheet({
           customerName: name.trim(),
           customerPhone: phone.trim(),
           orderType,
-          address: mapsLink ? `${address.trim()} | Localização: ${mapsLink}` : address.trim(),
-
+          address: address.trim(),
+          reference: reference.trim(),
+          locationUrl: mapsLink,
           neighborhood,
           paymentMethod: payment,
           changeFor: payment === "cash" && changeFor ? Number(changeFor) : null,
@@ -263,14 +265,22 @@ export function CheckoutSheet({
             <>
               <div className="grid gap-2">
                 <Label htmlFor="co-address">
-                  Endereço {mapsLink && <span className="opacity-70">(opcional)</span>}
+                  Endereço de entrega
                 </Label>
                 <Input
                   id="co-address"
                   maxLength={200}
-                  placeholder="Rua, número, referência"
+                  placeholder="Rua e número"
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
+                />
+                <Label htmlFor="co-reference">Ponto de referência</Label>
+                <Input
+                  id="co-reference"
+                  maxLength={160}
+                  placeholder="Ex.: próximo à praça"
+                  value={reference}
+                  onChange={(event) => setReference(event.target.value)}
                 />
                 <Button
                   type="button"
@@ -284,7 +294,7 @@ export function CheckoutSheet({
                     ? "Obtendo localização..."
                     : mapsLink
                       ? "Localização anexada ✓"
-                      : "Usar minha localização (GPS)"}
+                      : "Anexar localização da entrega (opcional)"}
                 </Button>
                 {mapsLink && (
                   <a

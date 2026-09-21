@@ -14,6 +14,7 @@ import {
   BarChart3,
   Bike,
   Copy,
+  CheckCircle2,
   Download,
   Layers,
   LayoutDashboard,
@@ -25,6 +26,7 @@ import {
   Settings2,
   ShoppingBag,
   Store,
+  Trash2,
 } from "lucide-react";
 import { WhatsAppPanel } from "@/components/admin/WhatsAppPanel";
 import { CouriersPanel } from "@/components/admin/CouriersPanel";
@@ -32,6 +34,7 @@ import { AiPanel } from "@/components/admin/AiPanel";
 import { Bot } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { dispatchOrder } from "@/lib/couriers.functions";
+import { deleteOrder, markOrderDelivered } from "@/lib/orders.functions";
 import {
   Select,
   SelectContent,
@@ -143,6 +146,8 @@ function AdminPage() {
   });
 
   const dispatch = useServerFn(dispatchOrder);
+  const markDelivered = useServerFn(markOrderDelivered);
+  const removeOrder = useServerFn(deleteOrder);
   const dispatchMutation = useMutation({
     mutationFn: (input: { orderId: string; courierId: string }) =>
       dispatch({ data: { ...input, baseUrl: window.location.origin } }),
@@ -152,6 +157,26 @@ function AdminPage() {
           ? `Pedido despachado, mas o WhatsApp falhou: ${result.whatsappError}`
           : "Pedido despachado! Cliente e motoboy avisados no WhatsApp.",
       );
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const deliveredMutation = useMutation({
+    mutationFn: (orderId: string) => markDelivered({ data: { orderId } }),
+    onSuccess: (result) => {
+      toast.success(
+        result.whatsappError
+          ? `Pedido entregue, mas o aviso falhou: ${result.whatsappError}`
+          : "Pedido entregue e cliente avisado no WhatsApp!",
+      );
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (orderId: string) => removeOrder({ data: { orderId } }),
+    onSuccess: () => {
+      toast.success("Pedido apagado.");
       invalidate();
     },
     onError: (error: Error) => toast.error(error.message),
@@ -557,6 +582,10 @@ function AdminPage() {
                   <Select
                     value={order.status}
                     onValueChange={async (value) => {
+                      if (value === "done") {
+                        deliveredMutation.mutate(order.id);
+                        return;
+                      }
                       const { error } = await supabase
                         .from("orders")
                         .update({ status: value })
@@ -654,6 +683,29 @@ function AdminPage() {
                     }}
                   >
                     <Copy className="size-4" /> Copiar
+                  </Button>
+                  {order.status !== "done" && order.status !== "canceled" && (
+                    <Button
+                      size="sm"
+                      className="rounded-full font-bold"
+                      disabled={deliveredMutation.isPending}
+                      onClick={() => deliveredMutation.mutate(order.id)}
+                    >
+                      <CheckCircle2 className="size-4" /> Marcar entregue
+                    </Button>
+                  )}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="rounded-full font-bold"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => {
+                      if (window.confirm(`Apagar definitivamente o pedido #${order.code}?`)) {
+                        deleteMutation.mutate(order.id);
+                      }
+                    }}
+                  >
+                    <Trash2 className="size-4" /> Apagar
                   </Button>
                 </div>
               </article>

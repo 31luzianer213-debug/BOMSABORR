@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { evolutionBaseUrl } from "./evolution-url";
 
 const itemSchema = z.object({
@@ -15,6 +16,8 @@ const orderSchema = z.object({
   customerPhone: z.string().trim().min(10).max(20),
   orderType: z.enum(["delivery", "pickup"]),
   address: z.string().trim().max(400).default(""),
+  reference: z.string().trim().max(160).default(""),
+  locationUrl: z.string().url().max(500).or(z.literal("")).default(""),
   neighborhood: z.string().trim().max(80).default(""),
   paymentMethod: z.enum(["pix", "cash", "card"]),
   changeFor: z.number().min(0).max(100000).nullable().default(null),
@@ -96,7 +99,7 @@ export const createOrder = createServerFn({ method: "POST" })
     }
 
     let deliveryFee = 0;
-    const hasGeoLocation = /Localiza[çc][ãa]o:\s*https?:\/\//i.test(data.address);
+    const hasGeoLocation = Boolean(data.locationUrl);
 
     if (data.orderType === "delivery") {
       if (settings.use_flat_fee) {
@@ -132,7 +135,12 @@ export const createOrder = createServerFn({ method: "POST" })
         customer_name: data.customerName,
         customer_phone: normalizePhone(data.customerPhone),
         order_type: data.orderType,
-        address: data.orderType === "delivery" ? data.address : "",
+        address:
+          data.orderType === "delivery"
+            ? [data.address, data.reference ? `Referência: ${data.reference}` : "", data.locationUrl ? `Localização: ${data.locationUrl}` : ""]
+                .filter(Boolean)
+                .join(" | ")
+            : "",
         neighborhood: data.orderType === "delivery" ? data.neighborhood : "",
         delivery_fee: deliveryFee,
         payment_method: data.paymentMethod,
@@ -154,7 +162,7 @@ export const createOrder = createServerFn({ method: "POST" })
           ? `Dinheiro${data.changeFor ? ` (troco para ${brl(data.changeFor)})` : ""}`
           : "Cartão na entrega";
 
-    const lines = [
+    const orderLines = [
       `*${settings.store_name} — Pedido #${order.code}*`,
       "",
       ...data.items.map(
@@ -171,13 +179,24 @@ export const createOrder = createServerFn({ method: "POST" })
         ? [`Chave Pix: ${settings.pix_key}${settings.pix_name ? ` (${settings.pix_name})` : ""}`]
         : []),
       data.orderType === "delivery"
-        ? `Entrega: ${data.address} — ${data.neighborhood}`
+        ? `Entrega: ${[data.address, data.neighborhood].filter(Boolean).join(" — ")}`
         : "Retirada no local",
+      ...(data.orderType === "delivery" && data.reference ? [`Ponto de referência: ${data.reference}`] : []),
+      ...(data.orderType === "delivery" && data.locationUrl
+        ? [`Localização de entrega enviada pelo cliente: ${data.locationUrl}`]
+        : []),
       `Cliente: ${data.customerName} — ${data.customerPhone}`,
       ...(data.notes ? ["", `Obs: ${data.notes}`] : []),
     ];
 
-    const message = lines.join("\n");
+    const message = orderLines.join("\n");
+    const customerLines = orderLines.filter(
+      (line) => !line.startsWith("Localização de entrega enviada pelo cliente:"),
+    );
+    if (data.orderType === "delivery" && data.locationUrl) {
+      customerLines.splice(customerLines.length - (data.notes ? 3 : 1), 0, "Localização de entrega recebida ✓");
+    }
+    const customerMessage = customerLines.join("\n");
     const results: string[] = [];
 
     if (settings.notify_store && settings.store_whatsapp) {
@@ -187,7 +206,7 @@ export const createOrder = createServerFn({ method: "POST" })
     if (settings.notify_customer) {
       const sent = await sendWhatsapp(
         data.customerPhone,
-        `${message}\n\nRecebemos seu pedido! 🍕 Em breve confirmamos por aqui.`,
+        `${customerMessage}\n\nRecebemos seu pedido! 🍕 Em breve confirmamos por aqui.`,
       );
       if (!sent.ok && sent.error) results.push(sent.error);
     }
@@ -205,4 +224,44 @@ export const createOrder = createServerFn({ method: "POST" })
       storeWhatsapp: settings.store_whatsapp,
       message,
     };
+  });
+
+async function assertAdmin(context: { supabase: { rpc: Function }; userId: string }) {
+  const { data } = await context.supabase.rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+  if (!data) throw new Error("Apenas administradores.");
+}
+
+export const markOrderDelivered = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ orderId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: order, error } = await supabaseAdmin
+      .from("orders")
+      .update({ status: "done", delivered_at: new Date().toISOString() })
+      .eq("id", data.orderId)
+      .select("code, customer_phone")
+      .single();
+    if (error || !order) throw new Error(error?.message ?? "Pedido não encontrado.");
+
+    const sent = await sendWhatsapp(
+      order.customer_phone,
+      `✅ Pedido #${order.code} entregue! Obrigado pela preferência. Bom apetite! 🍕`,
+    );
+    return { whatsappError: sent.ok ? null : (sent.error ?? "Falha no WhatsApp") };
+  });
+
+export const deleteOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ orderId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("orders").delete().eq("id", data.orderId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
