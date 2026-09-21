@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import { WhatsAppPanel } from "@/components/admin/WhatsAppPanel";
 import { CouriersPanel } from "@/components/admin/CouriersPanel";
+import { AiPanel } from "@/components/admin/AiPanel";
+import { Bot } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { dispatchOrder } from "@/lib/couriers.functions";
 import {
@@ -67,6 +69,7 @@ const NAV = [
   { value: "categories", label: "Categorias", icon: Layers },
   { value: "zones", label: "Entrega", icon: MapPin },
   { value: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { value: "ia", label: "Atendente IA", icon: Bot },
   { value: "settings", label: "Loja", icon: Settings2 },
 ];
 
