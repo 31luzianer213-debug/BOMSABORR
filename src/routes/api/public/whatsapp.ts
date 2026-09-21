@@ -134,8 +134,10 @@ export const Route = createFileRoute("/api/public/whatsapp")({
         const isAudio = Boolean(message["audioMessage"]);
         const { getWhatsappMediaBase64, markWhatsappRead, sendWhatsappAudio, sendWhatsappReply, showWhatsappPresence } =
           await import("@/lib/whatsapp.server");
-        await markWhatsappRead(key).catch(() => null);
-        await showWhatsappPresence(phone, isAudio ? "recording" : "composing").catch(() => null);
+        await Promise.all([
+          markWhatsappRead(key).catch(() => null),
+          showWhatsappPresence(phone, isAudio ? "recording" : "composing").catch(() => null),
+        ]);
 
         let text = String(extractText(message) ?? "").trim();
         const coordinates = extractCoordinates(message);
