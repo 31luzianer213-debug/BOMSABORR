@@ -133,9 +133,27 @@ export function AiPanel() {
               className="mt-1"
             />
           </div>
-          <div>
+          <div className="flex flex-wrap gap-2">
             <Button onClick={save} disabled={saving} className="rounded-full font-bold">
               {saving ? "Salvando..." : "Salvar atendente"}
+            </Button>
+            <Button
+              variant="secondary"
+              className="rounded-full font-bold"
+              disabled={connecting}
+              onClick={async () => {
+                setConnecting(true);
+                try {
+                  await configureAiWebhook({ data: { baseUrl: window.location.origin } });
+                  toast.success("Pronto! O WhatsApp já envia as mensagens para o atendente de IA.");
+                } catch (error) {
+                  toast.error((error as Error).message);
+                } finally {
+                  setConnecting(false);
+                }
+              }}
+            >
+              {connecting ? "Ativando..." : "Ativar no WhatsApp"}
             </Button>
           </div>
         </div>
