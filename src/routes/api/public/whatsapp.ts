@@ -141,7 +141,9 @@ export const Route = createFileRoute("/api/public/whatsapp")({
         try {
           const { buildMenuContext, buildSystemPrompt } = await import("@/lib/ai-attendant.server");
           const { generateAiText } = await import("@/lib/ai.server");
-          const { parseBotOrder, createBotOrder } = await import("@/lib/bot-order.server");
+          const { parseBotOrder, createBotOrder, extractOrderFromConversation } = await import(
+            "@/lib/bot-order.server"
+          );
 
           const [{ data: store }, { data: recentOrders }] = await Promise.all([
             supabaseAdmin.from("store_settings").select("is_open, opening_hours").limit(1).maybeSingle(),
