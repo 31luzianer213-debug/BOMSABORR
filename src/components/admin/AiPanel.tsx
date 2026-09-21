@@ -126,15 +126,12 @@ export function AiPanel() {
               O cardápio, os preços e as taxas por bairro já são enviados automaticamente para a IA.
             </p>
           </div>
-          <div>
-            <label className="text-sm font-semibold">Palavras que chamam um atendente humano</label>
-            <Input
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              placeholder="atendente, humano, pessoa"
-              className="mt-1"
-            />
-          </div>
+          <p className="rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">
+            Com o robô ligado ele atende sozinho, sem passar a conversa para uma pessoa. Ele sabe o
+            horário e avisa quando a loja está fechada. Ao fechar um pedido, ele registra na aba
+            Pedidos para você imprimir — depois de confirmado, o cliente só pode fazer um novo pedido.
+          </p>
+
           <div className="flex flex-wrap gap-2">
             <Button onClick={save} disabled={saving} className="rounded-full font-bold">
               {saving ? "Salvando..." : "Salvar atendente"}
