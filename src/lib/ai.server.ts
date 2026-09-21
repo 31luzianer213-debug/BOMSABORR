@@ -1,10 +1,13 @@
 export type AiTurn = { role: "user" | "assistant"; content: string };
 
+const AI_TIMEOUT_MS = 25_000;
+
 export async function generateAiText(options: { system: string; turns: AiTurn[] }): Promise<string> {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) throw new Error("A inteligência artificial não está configurada nesta conta.");
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({
@@ -38,6 +41,7 @@ export async function transcribeAiAudio(base64: string, mimetype = "audio/ogg"):
   form.append("file", new Blob([bytes], { type: mimetype }), `audio.${extension}`);
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
+    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     method: "POST",
     headers: { Authorization: `Bearer ${key}` },
     body: form,
@@ -53,6 +57,7 @@ export async function generateAiSpeech(text: string): Promise<string> {
   if (!key) throw new Error("A inteligência artificial não está configurada nesta conta.");
 
   const response = await fetch("https://ai.gateway.lovable.dev/v1/audio/speech", {
+    signal: AbortSignal.timeout(AI_TIMEOUT_MS),
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
     body: JSON.stringify({

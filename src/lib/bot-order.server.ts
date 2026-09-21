@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isStoreOpenNow } from "./store-hours";
+import { validateAndPriceItems } from "./order-validation.server";
 
 const brl = (value: number) =>
   value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -103,7 +104,7 @@ function normalizePhone(raw: string) {
 }
 
 /** Registra o pedido fechado pelo robô, para ele aparecer (e ser impresso) no painel. */
-export async function createBotOrder(order: BotOrder, phone: string) {
+export async function createBotOrder(order: BotOrder, phone: string, sourceExternalId?: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
   const { data: settings } = await supabaseAdmin
@@ -116,6 +117,11 @@ export async function createBotOrder(order: BotOrder, phone: string) {
     return { ok: false as const, error: "loja_fechada" };
   }
 
+  if (order.orderType === "delivery" && !settings.allow_delivery) return { ok: false as const, error: "entrega_indisponivel" };
+  if (order.orderType === "pickup" && !settings.allow_pickup) return { ok: false as const, error: "retirada_indisponivel" };
+  const paymentAllowed = { pix: settings.pay_pix, cash: settings.pay_cash, card: settings.pay_card }[order.paymentMethod];
+  if (!paymentAllowed) return { ok: false as const, error: "pagamento_indisponivel" };
+
   let deliveryFee = 0;
   if (order.orderType === "delivery") {
     if (settings.use_flat_fee) {
@@ -127,11 +133,24 @@ export async function createBotOrder(order: BotOrder, phone: string) {
         .ilike("name", order.neighborhood)
         .eq("active", true)
         .maybeSingle();
-      deliveryFee = Number(zone?.fee ?? 0);
+      if (!zone) return { ok: false as const, error: "area_invalida" };
+      deliveryFee = Number(zone.fee);
+    } else {
+      return { ok: false as const, error: "area_invalida" };
     }
   }
 
-  const subtotal = order.items.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
+  let pricedOrder: Awaited<ReturnType<typeof validateAndPriceItems>>;
+  try {
+    pricedOrder = await validateAndPriceItems(supabaseAdmin, order.items);
+  } catch (error) {
+    console.error("Pedido do bot não corresponde ao cardápio", error);
+    return { ok: false as const, error: "cardapio_invalido" };
+  }
+  const subtotal = pricedOrder.subtotal;
+  if (Number(settings.min_order) > 0 && subtotal < Number(settings.min_order)) {
+    return { ok: false as const, error: "pedido_minimo" };
+  }
   const total = subtotal + deliveryFee;
 
   const noteParts = [
@@ -151,23 +170,32 @@ export async function createBotOrder(order: BotOrder, phone: string) {
       delivery_fee: deliveryFee,
       payment_method: order.paymentMethod,
       change_for: order.paymentMethod === "cash" ? order.changeFor : null,
-      items: order.items,
+      items: pricedOrder.itemsJson,
       subtotal,
       total,
       notes: noteParts.join(" | ").slice(0, 300),
+      source_external_id: sourceExternalId || null,
     })
     .select("code, total")
     .single();
 
   if (error || !created) {
-    console.error("Não foi possível registrar o pedido do bot", error);
+    if (error?.code === "23505" && sourceExternalId) {
+      const { data: existing } = await supabaseAdmin
+        .from("orders")
+        .select("code, total")
+        .eq("source_external_id", sourceExternalId)
+        .maybeSingle();
+      if (existing) return { ok: true as const, code: existing.code, total: Number(existing.total), summary: "" };
+    }
+    console.error("Não foi possível registrar o pedido do bot", error?.code);
     return { ok: false as const, error: "falha" };
   }
 
   const summary = [
     `Pedido *#${created.code}* confirmado! ✅`,
     "",
-    ...order.items.map(
+    ...pricedOrder.items.map(
       (item) => `• ${item.qty}x ${item.name}${item.size ? ` (${item.size})` : ""} — ${brl(item.qty * item.unitPrice)}`,
     ),
     ...(deliveryFee > 0 ? [`Entrega: ${brl(deliveryFee)}`] : []),
