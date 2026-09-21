@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as EntregadorTokenRouteImport } from './routes/entregador.$token'
 import { Route as RastreioTokenRouteImport } from './routes/rastreio.$token'
+import { Route as ApiPublicWhatsappRouteImport } from './routes/api/public/whatsapp'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,6 +46,11 @@ const RastreioTokenRoute = RastreioTokenRouteImport.update({
   path: '/rastreio/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicWhatsappRoute = ApiPublicWhatsappRouteImport.update({
+  id: '/api/public/whatsapp',
+  path: '/api/public/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/entregador/$token': typeof EntregadorTokenRoute
   '/rastreio/$token': typeof RastreioTokenRoute
+  '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/entregador/$token': typeof EntregadorTokenRoute
   '/rastreio/$token': typeof RastreioTokenRoute
+  '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,13 +76,25 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/entregador/$token': typeof EntregadorTokenRoute
   '/rastreio/$token': typeof RastreioTokenRoute
+  '/api/public/whatsapp': typeof ApiPublicWhatsappRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/admin' | '/entregador/$token' | '/rastreio/$token'
+    | '/'
+    | '/auth'
+    | '/admin'
+    | '/entregador/$token'
+    | '/rastreio/$token'
+    | '/api/public/whatsapp'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/admin' | '/entregador/$token' | '/rastreio/$token'
+  to:
+    | '/'
+    | '/auth'
+    | '/admin'
+    | '/entregador/$token'
+    | '/rastreio/$token'
+    | '/api/public/whatsapp'
   id:
     | '__root__'
     | '/'
@@ -83,6 +103,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/entregador/$token'
     | '/rastreio/$token'
+    | '/api/public/whatsapp'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -91,6 +112,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   EntregadorTokenRoute: typeof EntregadorTokenRoute
   RastreioTokenRoute: typeof RastreioTokenRoute
+  ApiPublicWhatsappRoute: typeof ApiPublicWhatsappRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -137,6 +159,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RastreioTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/whatsapp': {
+      id: '/api/public/whatsapp'
+      path: '/api/public/whatsapp'
+      fullPath: '/api/public/whatsapp'
+      preLoaderRoute: typeof ApiPublicWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -157,6 +186,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   EntregadorTokenRoute: EntregadorTokenRoute,
   RastreioTokenRoute: RastreioTokenRoute,
+  ApiPublicWhatsappRoute: ApiPublicWhatsappRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
